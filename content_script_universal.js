@@ -1,6 +1,7 @@
+// ── Sniper Toast Notification ─────────────────────────────────────────────────
 let sniperToast = null;
 
-function showSniperToast(msg, status = "success") {
+function showSniperToast(msg, status = 'success') {
     if (sniperToast) sniperToast.remove();
 
     sniperToast = document.createElement('div');
@@ -8,46 +9,40 @@ function showSniperToast(msg, status = "success") {
     sniperToast.className = status === 'error' ? 'ai-error' : (status === 'loading' ? 'ai-loading' : '');
     sniperToast.innerText = msg;
 
-    // Click to dismiss
     sniperToast.addEventListener('click', () => {
-        sniperToast.remove();
-        sniperToast = null;
+        if (sniperToast) { sniperToast.remove(); sniperToast = null; }
     });
 
     document.body.appendChild(sniperToast);
 
-    // Auto-destruct after 20 seconds unless it's a loading message
     if (status !== 'loading') {
         setTimeout(() => {
-            if (sniperToast) {
-                sniperToast.remove();
-                sniperToast = null;
-            }
+            if (sniperToast) { sniperToast.remove(); sniperToast = null; }
         }, 20000);
     }
 }
 
-// Listen for Alt+S to snipe highlighted text
+// ── Text Sniper (Alt+S) ───────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
     if (e.altKey && e.code === 'KeyS') {
         const selectedText = window.getSelection().toString().trim();
         if (selectedText) {
-            showSniperToast("Target acquired. Processing...", "loading");
-            chrome.runtime.sendMessage({ type: "TEXT_SNIPER", text: selectedText });
+            showSniperToast('Target acquired. Processing...', 'loading');
+            chrome.runtime.sendMessage({ type: 'TEXT_SNIPER', text: selectedText });
         }
     }
 });
 
-// Listen for response from background script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === "SNIPER_RESULT") {
-        showSniperToast(request.result, "success");
-    } else if (request.type === "SNIPER_ERROR") {
-        showSniperToast(`Error: ${request.error}`, "error");
+// ── Message Listener ──────────────────────────────────────────────────────────
+chrome.runtime.onMessage.addListener((request) => {
+    if (request.type === 'SNIPER_RESULT') {
+        showSniperToast(request.result, 'success');
+    } else if (request.type === 'SNIPER_ERROR') {
+        showSniperToast(`Error: ${request.error}`, 'error');
     }
 });
 
-// --- AREA IMAGE SNIPER (ALT+C) ---
+// ── Area Image Sniper (Alt+C) ─────────────────────────────────────────────────
 let isCropping = false;
 let startX, startY, overlayBox, selectorBox;
 
@@ -58,11 +53,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 function initAreaSniper() {
-    showSniperToast("Crosshair active. Drag to capture.", "loading");
-    
+    showSniperToast('Crosshair active. Drag to capture.', 'loading');
+
     overlayBox = document.createElement('div');
     overlayBox.id = 'sniper-overlay';
-    
+
     selectorBox = document.createElement('div');
     selectorBox.id = 'sniper-selector';
     overlayBox.appendChild(selectorBox);
@@ -72,42 +67,79 @@ function initAreaSniper() {
         isCropping = true;
         startX = e.clientX;
         startY = e.clientY;
-        selectorBox.style.left = startX + 'px';
-        selectorBox.style.top = startY + 'px';
-        selectorBox.style.width = '0px';
-        selectorBox.style.height = '0px';
+        selectorBox.style.cssText = `left:${startX}px;top:${startY}px;width:0;height:0;`;
     });
 
     overlayBox.addEventListener('mousemove', (e) => {
         if (!isCropping) return;
-        const currentX = e.clientX;
-        const currentY = e.clientY;
-        selectorBox.style.width = Math.abs(currentX - startX) + 'px';
-        selectorBox.style.height = Math.abs(currentY - startY) + 'px';
-        selectorBox.style.left = Math.min(currentX, startX) + 'px';
-        selectorBox.style.top = Math.min(currentY, startY) + 'px';
+        const w = Math.abs(e.clientX - startX);
+        const h = Math.abs(e.clientY - startY);
+        selectorBox.style.width  = w + 'px';
+        selectorBox.style.height = h + 'px';
+        selectorBox.style.left   = Math.min(e.clientX, startX) + 'px';
+        selectorBox.style.top    = Math.min(e.clientY, startY) + 'px';
     });
 
     overlayBox.addEventListener('mouseup', (e) => {
         isCropping = false;
         const rect = selectorBox.getBoundingClientRect();
         overlayBox.remove();
-        
+
         if (rect.width > 15 && rect.height > 15) {
-            showSniperToast("Crop secured. Processing image...", "loading");
-            // Multiply by devicePixelRatio for high-res displays like Retina
+            showSniperToast('Crop secured. Processing image...', 'loading');
             const dpr = window.devicePixelRatio || 1;
             chrome.runtime.sendMessage({
-                type: "CROP_SNIPER",
-                coords: { 
-                    x: rect.left * dpr, 
-                    y: rect.top * dpr, 
-                    w: rect.width * dpr, 
-                    h: rect.height * dpr 
+                type:   'CROP_SNIPER',
+                coords: {
+                    x: rect.left * dpr,
+                    y: rect.top  * dpr,
+                    w: rect.width  * dpr,
+                    h: rect.height * dpr
                 }
             });
         } else {
-            showSniperToast("Crop too small, aborted.", "error");
+            showSniperToast('Crop too small, aborted.', 'error');
+        }
+    });
+
+    // Escape cancels crop
+    document.addEventListener('keydown', function cancelCrop(e) {
+        if (e.code === 'Escape' && document.getElementById('sniper-overlay')) {
+            overlayBox.remove();
+            isCropping = false;
+            showSniperToast('Crop cancelled.', 'error');
+            document.removeEventListener('keydown', cancelCrop);
         }
     });
 }
+
+// ── Panic Hotkey (Ctrl+Shift+X) ───────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyX') {
+        chrome.runtime.sendMessage({ type: 'TOGGLE_PANIC_FROM_PAGE' });
+    }
+});
+
+// ── Tab Visibility Bypass ─────────────────────────────────────────────────────
+(function initVisibilityBypass() {
+    chrome.storage.local.get(['visibilityBypass'], (data) => {
+        if (!data.visibilityBypass) return;
+
+        // Override document.visibilityState to always appear visible
+        try {
+            Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+            Object.defineProperty(document, 'hidden',          { get: () => false,     configurable: true });
+        } catch (e) { /* already defined, skip */ }
+
+        // Intercept and suppress visibilitychange, blur, and focus-loss events
+        const suppress = (e) => { e.stopImmediatePropagation(); };
+        document.addEventListener('visibilitychange', suppress, true);
+        window.addEventListener('blur',              suppress, true);
+        window.addEventListener('focusout',          suppress, true);
+
+        // Re-dispatch focus so page thinks it's always focused
+        window.addEventListener('blur', () => {
+            window.dispatchEvent(new Event('focus'));
+        }, true);
+    });
+})();

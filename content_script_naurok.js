@@ -16,21 +16,41 @@ function sysLog(msg) {
 }
 
 function scrubAllEvidence() {
-    // Target anything that has stealth or ghost classes and strip them bare
     document.querySelectorAll('.ai-stealth, .ai-stealth-ghost').forEach(el => {
         el.classList.remove('ai-stealth', 'ai-stealth-bold', 'ai-stealth-italic', 'ai-stealth-color', 'ai-stealth-font', 'ai-stealth-ghost');
+        el.style.removeProperty('color');
+        el.style.removeProperty('text-shadow');
+        el.style.removeProperty('cursor');
     });
 }
 
 function applyStealthStyles(targetEl) {
-    chrome.storage.local.get(['styleBold', 'styleItalic', 'styleColor', 'styleFont', 'styleGhost'], (data) => {
-        if (data.styleBold !== false && !data.styleGhost) targetEl.classList.add('ai-stealth-bold');
-        if (data.styleItalic && !data.styleGhost) targetEl.classList.add('ai-stealth-italic');
-        if (data.styleColor && !data.styleGhost) targetEl.classList.add('ai-stealth-color');
-        if (data.styleFont && !data.styleGhost) targetEl.classList.add('ai-stealth-font');
+    chrome.storage.local.get(['styleBold', 'styleItalic', 'styleColor', 'styleFont', 'styleGhost', 'cursorStyle', 'themeColor', 'rainbowMode'], (data) => {
+        if (data.styleBold !== false) targetEl.classList.add('ai-stealth-bold');
+        if (data.styleItalic) targetEl.classList.add('ai-stealth-italic');
+        if (data.styleFont) targetEl.classList.add('ai-stealth-font');
         
-        // Ghost mode overrides the loud styles
-        if (data.styleGhost) targetEl.classList.add('ai-stealth-ghost');
+        if (data.styleColor) {
+            if (data.rainbowMode) {
+                // Dynamically build the rainbow animation if it doesn't exist
+                if (!document.getElementById('ai-rainbow-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'ai-rainbow-style';
+                    style.innerHTML = `@keyframes ai-rainbow-pulse { 0% {color: #ff0000; text-shadow: 0 0 5px #ff0000;} 16% {color: #ffff00; text-shadow: 0 0 5px #ffff00;} 33% {color: #00ff00; text-shadow: 0 0 5px #00ff00;} 50% {color: #00ffff; text-shadow: 0 0 5px #00ffff;} 66% {color: #0000ff; text-shadow: 0 0 5px #0000ff;} 83% {color: #ff00ff; text-shadow: 0 0 5px #ff00ff;} 100% {color: #ff0000; text-shadow: 0 0 5px #ff0000;} } .ai-stealth-rainbow { animation: ai-rainbow-pulse 3s linear infinite !important; }`;
+                    document.head.appendChild(style);
+                }
+                targetEl.classList.add('ai-stealth-rainbow');
+            } else {
+                const hex = data.themeColor || '#00ff00';
+                targetEl.style.setProperty('color', hex, 'important');
+                targetEl.style.setProperty('text-shadow', '1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9)', 'important');
+            }
+        }
+        
+        if (data.styleGhost) {
+            targetEl.classList.add('ai-stealth-ghost');
+            targetEl.style.setProperty('cursor', data.cursorStyle || 'text', 'important');
+        }
         
         targetEl.classList.add('ai-stealth'); 
     });

@@ -10,6 +10,15 @@
     text-shadow: 1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9) !important; 
 }
 
+/* Ghost Formatting - Invisible to the naked eye */
+.ai-stealth-ghost {
+    padding-left: 1px !important;
+    cursor: default !important; 
+}
+.ai-stealth-ghost:hover {
+    box-shadow: inset 0 0 1px rgba(0,255,0,0.3) !important;
+}
+
 /* Text Sniper Toast */
 #ai-sniper-toast {
     position: fixed !important;
@@ -50,13 +59,4 @@
 #sniper-selector {
     border: 1px dashed #00ff00 !important; position: absolute !important; 
     background: rgba(0,255,0,0.1) !important; pointer-events: none !important;
-}
-
-/* Ghost Formatting - Invisible to the naked eye */
-.ai-stealth-ghost {
-    padding-left: 1px !important;
-    cursor: crosshair !important;
-}
-.ai-stealth-ghost:hover {
-    box-shadow: inset 0 0 1px rgba(0,255,0,0.3) !important;
 }

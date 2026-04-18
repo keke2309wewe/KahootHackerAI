@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Multi-Platform AI Stealth",
-  "version": "4.0",
-  "permissions": ["tabs", "scripting", "storage", "webNavigation", "contextMenus"],
+  "version": "4.1",
+  "permissions": ["tabs", "scripting", "storage", "webNavigation", "contextMenus", "desktopCapture"],
   "host_permissions": [
     "<all_urls>"
   ],

@@ -1,82 +1,257 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
-        body { width: 340px; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; background: #1a1a1a; color: #fff; margin: 0; }
-        h3 { margin-top: 0; color: #00ff00; font-size: 18px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        :root { 
+            --bg: #0f0f11; --panel: #1a1a1d; --text: #e0e0e0; --border: #333; 
+            --accent: #00ff00; 
+        }
         
-        .stats { text-align: center; margin-bottom: 15px; font-size: 13px; color: #aaa; line-height: 1.5; }
-        .stats span { color: #00ff00; font-weight: bold; }
+        body { width: 380px; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 0; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; }
         
-        #panicBtn { background: #ff0000; margin-bottom: 15px; }
-        #panicBtn:hover { background: #cc0000; }
-        
-        label { font-size: 13px; font-weight: bold; margin-bottom: 4px; display: block; color: #ddd; }
-        .guide { font-size: 11px; color: #888; margin-bottom: 10px; display: block; line-height: 1.3; }
-        select, input { width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 6px; }
-        select:focus, input:focus { outline: none; border-color: #00ff00; }
-        
-        .split-input { display: flex; gap: 10px; margin-bottom: 15px; }
-        .split-input input { margin-bottom: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px 15px; border-bottom: 1px solid var(--border); gap: 6px; }
+        .header h3 { margin: 0; color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; flex: 1; }
+        .icon-btn { background: transparent; border: 1px solid transparent; font-size: 15px; cursor: pointer; color: #888; padding: 4px 8px; border-radius: 4px; transition: 0.2s; white-space: nowrap; }
+        .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+        .icon-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,255,0,0.05); }
 
-        button { width: 100%; padding: 12px; background: #00ff00; color: #000; border: none; font-weight: bold; font-size: 14px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
-        button:hover { background: #00cc00; }
+        .view-container { padding: 14px; }
+        #chatView { display: none; height: 480px; flex-direction: column; }
+        #settingsView { display: block; }
+        #promptsView { display: none; }
 
-        .log-container { margin-top: 20px; border-top: 1px solid #333; padding-top: 15px; }
-        textarea { width: 100%; height: 120px; background: #0a0a0a; color: #00ff00; border: 1px solid #333; font-family: monospace; font-size: 10px; padding: 5px; box-sizing: border-box; resize: none; margin-bottom: 10px; }
-        #clearLogsBtn { background: #555; padding: 8px; font-size: 12px; color: #fff; }
-        #clearLogsBtn:hover { background: #777; }
+        .intercept-box { text-align: center; border: 1px solid var(--accent); padding: 8px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; font-weight: bold; background: rgba(0,0,0,0.5); }
+        .intercept-box span { color: var(--accent); font-size: 16px; display: block; margin-top: 3px; word-break: break-all; }
+
+        .stats { display: flex; justify-content: space-between; background: var(--panel); padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; border: 1px solid var(--border); }
+        .stats span { color: var(--accent); font-weight: bold; }
+        
+        #panicBtn { width: 100%; padding: 10px; background: #cc0000; color: #fff; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+        #panicBtn:hover { opacity: 0.85; }
+        
+        .form-group { margin-bottom: 11px; }
+        label { font-size: 11px; font-weight: 600; margin-bottom: 4px; display: block; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        select, input[type="text"], input[type="password"], input[type="number"] { width: 100%; padding: 7px 10px; background: #111; color: #fff; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; font-family: monospace; font-size: 12px; }
+        select:focus, input:focus { outline: none; border-color: var(--accent); }
+        textarea.prompt-box { width: 100%; background: #0a0a0a; color: #ccc; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 11px; padding: 8px; box-sizing: border-box; resize: vertical; line-height: 1.5; }
+        textarea.prompt-box:focus { outline: none; border-color: var(--accent); }
+        
+        input[type="color"] { width: 100%; height: 30px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; background: #111; padding: 2px; }
+
+        .split-input { display: flex; gap: 10px; align-items: flex-end; }
+        .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; background: var(--panel); padding: 9px; border-radius: 6px; border: 1px solid var(--border); }
+        .checkbox-label { display: flex; align-items: center; font-size: 12px; font-weight: normal; color: #ccc; cursor: pointer; margin: 0; text-transform: none; }
+        .checkbox-label input { width: auto; margin-right: 6px; accent-color: var(--accent); }
+
+        .section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+
+        .btn-primary { width: 100%; padding: 9px; background: var(--accent); color: #000; border: none; font-weight: bold; font-size: 13px; cursor: pointer; border-radius: 4px; transition: 0.2s; margin-top: 8px; }
+        .btn-primary:hover { opacity: 0.8; }
+        .btn-secondary { width: 100%; padding: 7px; background: transparent; color: var(--accent); border: 1px solid var(--accent); font-weight: bold; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; margin-top: 6px; }
+        .btn-secondary:hover { background: rgba(0,255,0,0.1); }
+
+        .log-container { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+        textarea#logArea { width: 100%; height: 90px; background: #050505; color: var(--accent); border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 10px; padding: 5px; box-sizing: border-box; resize: none; margin-bottom: 5px; }
+
+        /* Chat UI */
+        .chat-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 5px; }
+        .chat-btn { background: #2a2a2a; border: 1px solid #444; color: #ccc; padding: 4px 9px; font-size: 11px; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+        .chat-btn:hover { background: #444; color: #fff; }
+        .chat-btn.danger { background: #2a0a0a; border-color: #662222; color: #ff5555; }
+        .chat-btn.danger:hover { background: #440000; }
+        
+        .chat-session-controls { display: flex; gap: 5px; flex-grow: 1; }
+        #chatSessionSelect { flex-grow: 1; padding: 4px; font-size: 11px; margin: 0; }
+        #newChatBtn { background: var(--accent); color: #000; font-weight: bold; padding: 0 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; line-height: 1; }
+        
+        .chat-settings-bar { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; border: 1px solid var(--border); }
+        
+        #chatMessages { flex-grow: 1; background: #111; border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.45; }
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 88%; word-wrap: break-word; }
+        .msg.user { background: #1e2030; align-self: flex-end; border-bottom-right-radius: 2px; border: 1px solid #2a2a40; }
+        .msg.ai { background: rgba(0, 255, 0, 0.07); border: 1px solid rgba(0,255,0,0.25); align-self: flex-start; color: #e0e0e0; border-bottom-left-radius: 2px; }
+        .msg img { max-width: 100%; border-radius: 4px; margin-top: 5px; border: 1px solid #444; }
+        .msg-telemetry { font-size: 9px; color: #555; margin-top: 5px; border-top: 1px solid #222; padding-top: 3px; }
+        
+        .chat-input-area { display: flex; gap: 8px; margin-top: 10px; }
+        #chatInput { flex-grow: 1; margin: 0; border-radius: 20px; padding: 8px 14px; }
+        #sendChatBtn { background: var(--accent); border: none; border-radius: 50%; width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        #sendChatBtn:hover { transform: scale(1.1); }
+
+        /* Prompts View */
+        .prompt-group { margin-bottom: 14px; }
+        .prompt-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .prompt-hint { font-size: 10px; color: #555; margin-bottom: 5px; }
     </style>
 </head>
 <body>
-    <h3>Kahoot AI Stealth</h3>
-    
-    <div class="stats">
-        In: <span id="inCount">0</span> | Out: <span id="outCount">0</span><br>
-        Spent: $<span id="totalCost">0.00000</span>
-    </div>
-    
-    <button id="panicBtn">PANIC: OFF (AI ACTIVE)</button>
-    
-    <label for="provider">API Provider</label>
-    <select id="provider">
-        <option value="openrouter">OpenRouter (Default)</option>
-        <option value="openai">OpenAI</option>
-        <option value="custom">Custom Endpoint</option>
-    </select>
-
-    <div id="customUrlGroup" style="display: none;">
-        <input type="text" id="customUrl" placeholder="https://api.your-server.com/v1/chat/completions">
+    <div class="header">
+        <h3>AI Stealth</h3>
+        <button id="navSettingsBtn" class="icon-btn active" title="Settings">⚙️ Settings</button>
+        <button id="navPromptsBtn" class="icon-btn" title="Edit Prompts">✏️ Prompts</button>
+        <button id="toggleChatBtn" class="icon-btn" title="Comms">💬 Comms</button>
     </div>
 
-    <label for="apiKey">API Key</label>
-    <input type="password" id="apiKey" placeholder="sk-...">
-    
-    <label for="model">AI Model</label>
-    <input type="text" id="model" value="google/gemini-2.5-flash">
+    <!-- SETTINGS VIEW -->
+    <div id="settingsView" class="view-container">
+        <div class="intercept-box">
+            LAST INTERCEPT
+            <span id="lastInterceptText">AWAITING TARGET</span>
+        </div>
 
-    <label>Stealth Styling (Cumulative)</label>
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; font-size: 12px;">
-        <label style="display: inline; font-weight: normal;"><input type="checkbox" id="styleBold"> Bold</label>
-        <label style="display: inline; font-weight: normal;"><input type="checkbox" id="styleItalic"> Italic</label>
-        <label style="display: inline; font-weight: normal;"><input type="checkbox" id="styleColor"> Eggshell Color</label>
-        <label style="display: inline; font-weight: normal;"><input type="checkbox" id="styleFont"> Monospace</label>
-        <label style="display: inline; font-weight: normal;"><input type="checkbox" id="styleGhost"> Ghost Ink</label>
+        <button id="panicBtn">Panic: OFF (ACTIVE)</button>
+        
+        <div class="stats">
+            <div>In: <span id="inCount">0</span></div>
+            <div>Out: <span id="outCount">0</span></div>
+            <div>Spent: $<span id="totalCost">0.0000</span></div>
+        </div>
+        
+        <div class="section-title">🔑 API Configuration</div>
+
+        <div class="split-input form-group">
+            <div style="flex:1;">
+                <label>Provider</label>
+                <select id="provider">
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div style="flex:2;">
+                <label>API Key</label>
+                <input type="password" id="apiKey" placeholder="sk-...">
+            </div>
+        </div>
+
+        <div class="form-group" id="customUrlGroup" style="display:none;">
+            <label>Custom Endpoint URL</label>
+            <input type="text" id="customUrl" placeholder="https://...">
+        </div>
+
+        <div class="split-input form-group">
+            <div style="flex:2;">
+                <label>Model</label>
+                <input type="text" id="model" value="google/gemini-2.5-flash">
+            </div>
+            <div style="flex:1;">
+                <label>In Cost ($/1M)</label>
+                <input type="number" id="inCost" step="0.01" value="0.50">
+            </div>
+            <div style="flex:1;">
+                <label>Out Cost ($/1M)</label>
+                <input type="number" id="outCost" step="0.01" value="3.00">
+            </div>
+        </div>
+
+        <div class="section-title">🎨 Stealth Appearance</div>
+
+        <div class="split-input form-group">
+            <div style="flex:1;">
+                <label>Theme & Ink Color</label>
+                <input type="color" id="themeColor" value="#00ff00">
+            </div>
+            <div style="flex:1;">
+                <label>Ghost Cursor</label>
+                <select id="cursorStyle">
+                    <option value="text">Text (I-Beam)</option>
+                    <option value="pointer">Pointer (Hand)</option>
+                    <option value="default">Default</option>
+                    <option value="none">Invisible</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Stealth Formatting</label>
+            <div class="checkbox-grid">
+                <label class="checkbox-label"><input type="checkbox" id="styleBold"> Bold</label>
+                <label class="checkbox-label"><input type="checkbox" id="styleItalic"> Italic</label>
+                <label class="checkbox-label"><input type="checkbox" id="styleColor"> Color Inject</label>
+                <label class="checkbox-label"><input type="checkbox" id="styleFont"> Monospace</label>
+                <label class="checkbox-label"><input type="checkbox" id="styleGhost"> Ghost Ink</label>
+                <label class="checkbox-label"><input type="checkbox" id="rainbowMode"> Rainbow Mode</label>
+            </div>
+        </div>
+
+        <div class="section-title">🛡️ Anti-Detection</div>
+
+        <div class="form-group">
+            <div class="checkbox-grid" style="grid-template-columns: 1fr;">
+                <label class="checkbox-label"><input type="checkbox" id="visibilityBypass"> Tab Visibility Bypass (locks visibilityState to "visible")</label>
+            </div>
+        </div>
+        
+        <button id="save" class="btn-primary">Save Configuration</button>
+        <button id="resetTokensBtn" class="btn-secondary">Reset Token Counter</button>
+
+        <div class="log-container">
+            <label>System Logs</label>
+            <textarea id="logArea" readonly></textarea>
+            <button id="clearSystemLogsBtn" class="chat-btn danger" style="width:100%;">🗑️ Clear Logs</button>
+        </div>
     </div>
 
-    <label>Cost per 1M Tokens ($)</label>
-    <span class="guide">Defaults set to Gemini 2.5 Flash pricing.</span>
-    <div class="split-input">
-        <input type="number" step="0.01" id="inCost" title="Input Cost" value="0.30">
-        <input type="number" step="0.01" id="outCost" title="Output Cost" value="2.50">
-    </div>
-    
-    <button id="save">Save Settings</button>
+    <!-- PROMPTS VIEW -->
+    <div id="promptsView" class="view-container">
+        <div class="section-title">✏️ Custom AI Prompts</div>
+        <p style="font-size:11px; color:#666; margin: 0 0 12px;">Edit the system instructions sent to the AI. Leave blank to use the built-in default.</p>
 
-    <div class="log-container">
-        <label>System Logs</label>
-        <textarea id="logArea" readonly></textarea>
-        <button id="clearLogsBtn">Clear Logs</button>
+        <div class="prompt-group">
+            <div class="prompt-label">🎮 Kahoot / Naurok Vision Prompt</div>
+            <div class="prompt-hint">Used for automated screenshot analysis. Must ask AI to reply RED/BLUE/YELLOW/GREEN.</div>
+            <textarea class="prompt-box" id="promptKahoot" rows="5" placeholder="Leave blank for default..."></textarea>
+        </div>
+
+        <div class="prompt-group">
+            <div class="prompt-label">⏱️ Classtime Vision Prompt</div>
+            <div class="prompt-hint">Used for Classtime screenshots. Must ask AI to reply with a single number (1, 2, 3...).</div>
+            <textarea class="prompt-box" id="promptClasstime" rows="5" placeholder="Leave blank for default..."></textarea>
+        </div>
+
+        <div class="prompt-group">
+            <div class="prompt-label">🔤 Text Sniper Prompt (Alt+S)</div>
+            <div class="prompt-hint">System prompt for the text sniper. Defines AI personality and reply style.</div>
+            <textarea class="prompt-box" id="promptSniper" rows="6" placeholder="Leave blank for default..."></textarea>
+        </div>
+
+        <div class="prompt-group">
+            <div class="prompt-label">🖼️ Crop Sniper Prompt (Alt+C)</div>
+            <div class="prompt-hint">System prompt for image crop analysis.</div>
+            <textarea class="prompt-box" id="promptCrop" rows="5" placeholder="Leave blank for default..."></textarea>
+        </div>
+
+        <div class="prompt-group">
+            <div class="prompt-label">💬 Chat Default System Prompt</div>
+            <div class="prompt-hint">Used at the start of each new chat session (only when NUSH Profile is on).</div>
+            <textarea class="prompt-box" id="promptChat" rows="5" placeholder="Leave blank for default..."></textarea>
+        </div>
+
+        <button id="savePrompts" class="btn-primary">Save Prompts</button>
+        <button id="resetPrompts" class="btn-secondary">Reset All to Default</button>
+    </div>
+
+    <!-- CHAT VIEW -->
+    <div id="chatView" class="view-container">
+        <div class="chat-toolbar">
+            <button id="backToSettings" class="chat-btn">🔙 Back</button>
+            <div class="chat-session-controls">
+                <select id="chatSessionSelect"></select>
+                <button id="newChatBtn" title="New Comms Channel">+</button>
+            </div>
+            <button id="deleteChatBtn" class="chat-btn danger" title="Delete Thread">🗑️</button>
+        </div>
+        
+        <div class="chat-settings-bar">
+            <label class="checkbox-label"><input type="checkbox" id="useNushPrompt" checked> 8th Grade NUSH Profile</label>
+        </div>
+
+        <div id="chatMessages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Text or Ctrl+V Image..." autocomplete="off">
+            <button id="sendChatBtn">►</button>
+        </div>
     </div>
 
     <script src="popup.js"></script>
