@@ -54,7 +54,8 @@ Before the extension can solve anything, you need to provide it with an AI brain
 
 ## 🎮 How to Use
 
-* **Auto-Solve (Kahoot, Naurok, Classtime):** Simply play the game normally. When the question appears and the answer boxes load, the extension will automatically analyze the screen and apply your chosen Stealth Style to the correct box.
+* **Auto-Solve (Kahoot, Naurok):** Simply play the game normally. When the question appears and the answer boxes load, the extension will automatically analyze the screen and apply your chosen Stealth Style to the correct box.
+* **Manual Capture (Classtime):** For Classtime, wait for the question to load and press `Shift+A`. The extension will then capture the screen and highlight the correct answer using your chosen Stealth Style.
 * **Text Sniper:** Highlight any text on any webpage, right-click, and select **"Snipe Text with AI"**. The extension will process the text and return an answer discretely.
 * **Direct Chat:** Open the popup and click **Comms**. Ask any question or paste a screenshot for immediate help.
 * **Panic Mode:** If someone is walking by, hit `Ctrl+Shift+X` (`Cmd+Shift+X` on Mac) or click the red Panic button in the popup. The extension will instantly revert any modified text or buttons back to normal and pause auto-scanning until toggled off.
