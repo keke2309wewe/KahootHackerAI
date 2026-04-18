@@ -2,19 +2,27 @@
 
 A stealthy, AI-powered browser extension designed to secretly solve online quizzes using vision models. It runs entirely in the background, takes screenshots of active quizzes, and highlights the correct answers using nearly invisible CSS modifications to avoid detection.
 
-## 🚀 What's New in V2 (Engine v4.3)
-* **Built-in Chat & Comms Hub:** A brand new "Comms" tab in the popup. Directly chat with your AI, paste images (`Ctrl+V`), and manage multiple chat sessions.
-* **Custom AI Prompts:** A dedicated "Prompts" tab to completely rewrite the system instructions. Change how the AI solves Kahoot, how it replies to text snipes, or customize its persona.
-* **Tab Visibility Bypass:** An anti-detection feature that locks the browser's `visibilityState` to "visible", preventing quiz sites from knowing when you switch tabs.
-* **Reasoning Model Support:** Built-in support for AI models that use "reasoning effort" (e.g., `gemini-2.0-pro-exp`).
-* **Advanced Stealth Styling:** Added a Color Picker for custom stealth colors, "Rainbow Mode", and "Ghost Cursor" (hide your cursor or change it to an I-beam over the correct answer).
+## 🚀 What's New in V4.3
+
+* **Shared Utility Architecture:** All platform content scripts now use a single shared utility file (`shared_utils.js`), eliminating code duplication and making updates easier.
+* **Naurok-Specific AI Prompt:** Naurok now gets its own vision prompt that correctly describes its color layout (Pink → Yellow → Blue → Green), improving accuracy.
+* **Retry on AI Failure:** If the AI fails on a screenshot analysis, the extension automatically retries once after 2 seconds before giving up.
+* **Test Connection Button:** A new button in the popup to instantly verify your API key, model, and endpoint are working — no more guessing.
+* **Sniper History:** All Text Sniper results are now saved in storage (up to 30 entries) so you can recall past answers.
+* **Race Condition Fix:** The chat system prompt injection is now properly async, preventing potential message ordering bugs.
+* **Performance Fix:** Kahoot's scanner now uses `textContent` instead of `innerText`, avoiding expensive layout reflows every second.
+* **Permission Cleanup:** Removed the unused `desktopCapture` permission — fewer scary warnings on install.
 
 ## 🌟 Core Features
 
 * **Visual AI Processing:** Instead of reading the DOM (which is easily broken by site updates), the extension takes a screenshot of the quiz and sends it to a Vision AI model (like Gemini 2.5 Flash) to determine the answer.
 * **Stealth Highlights:** Applies subtle CSS classes (like Ghost Ink, Eggshell Color, or Slight Bold) to the correct answer, meaning only you know what to look for. No obvious red arrows or popups!
-* **Multi-Platform Support:** Works out of the box with Kahoot, Classtime, and Naurok. 
-* **Universal "Sniper" Mode:** Right-click any text on any website to send it to the AI for an instant, discrete answer. Also supports cropped area captures.
+* **Multi-Platform Support:** Works out of the box with Kahoot, Classtime, and Naurok.
+* **Universal "Sniper" Mode:** Right-click any text on any website to send it to the AI for an instant, discrete answer. Also supports cropped area captures. Results are rendered with **bold**, *italic*, and math formatting.
+* **Built-in Chat (Comms Hub):** A full AI chat interface in the popup with multi-session support, image paste (`Ctrl+V`), and per-message cost telemetry.
+* **Custom AI Prompts:** A dedicated "Prompts" tab to completely rewrite the system instructions for each platform individually.
+* **Reasoning Model Support:** Toggle reasoning on/off with configurable effort level (Low/Medium/High). Works correctly across OpenRouter, OpenAI, and Custom endpoints.
+* **Tab Visibility Bypass:** Locks the browser's `visibilityState` to "visible", preventing quiz sites from knowing when you switch tabs.
 * **Panic Button (Kill Switch):** Press `Ctrl+Shift+X` (or `Cmd+Shift+X` on Mac) to instantly scrub all visual evidence from the screen and pause the background scanner.
 * **BYOK (Bring Your Own Key):** Supports OpenRouter, OpenAI, or any Custom API endpoint.
 
@@ -24,7 +32,7 @@ Because this extension uses powerful background features, it is not listed on th
 
 1. **Download the Code:**
    * Clone this repository using Git: `git clone https://github.com/keke2309wewe/KahootHackerAI.git`
-   * OR download the repository as a ZIP file and extract it.
+   * OR download the repository as a ZIP file from the [Releases](https://github.com/keke2309wewe/KahootHackerAI/releases) page.
 2. **Open Extensions Page:**
    * Open your Chrome (or Chromium-based) browser and go to `chrome://extensions/`.
 3. **Enable Developer Mode:**
@@ -38,25 +46,28 @@ Because this extension uses powerful background features, it is not listed on th
 
 Before the extension can solve anything, you need to provide it with an AI brain.
 
-1. **Get an API Key:** 
-   * The easiest and cheapest method is using [OpenRouter](https://openrouter.ai/). Create an account, add a few cents in credits, and generate an API key. 
+1. **Get an API Key:**
+   * The easiest and cheapest method is using [OpenRouter](https://openrouter.ai/). Create an account, add a few cents in credits, and generate an API key.
    * Alternatively, you can use an OpenAI API key.
 2. **Configure the Extension:**
    * Click the extension icon in your browser toolbar to open the popup.
    * Select your **API Provider** (OpenRouter, OpenAI, or Custom).
    * Paste your **API Key**.
    * Leave the **AI Model** as `google/gemini-2.5-flash` (recommended for speed and cost), or change it if you prefer.
-3. **Set Stealth Styling & Anti-Detection:**
-   * Choose how you want the correct answer to be highlighted (e.g. Ghost Ink, Custom Color, Rainbow mode). 
+3. **Test Your Connection:**
+   * Click the **Test Connection** button. If you see "✓ Connected", you're good to go!
+4. **Set Stealth Styling & Anti-Detection:**
+   * Choose how you want the correct answer to be highlighted (e.g. Ghost Ink, Custom Color, Rainbow mode).
    * Turn on **Tab Visibility Bypass** if you're taking a strict test that tracks tab switching.
-4. **Tweak Prompts (Optional):**
-   * Go to the **Prompts** tab if you want to modify how the AI thinks or formats its answers.
+5. **Tweak Prompts (Optional):**
+   * Go to the **Prompts** tab if you want to modify how the AI thinks or formats its answers. Each platform (Kahoot, Naurok, Classtime) has its own customizable prompt.
 
 ## 🎮 How to Use
 
 * **Auto-Solve (Kahoot, Naurok):** Simply play the game normally. When the question appears and the answer boxes load, the extension will automatically analyze the screen and apply your chosen Stealth Style to the correct box.
 * **Manual Capture (Classtime):** For Classtime, wait for the question to load and press `Shift+A`. The extension will then capture the screen and highlight the correct answer using your chosen Stealth Style.
-* **Text Sniper:** Highlight any text on any webpage, right-click, and select **"Snipe Text with AI"**. The extension will process the text and return an answer discretely.
+* **Text Sniper:** Highlight any text on any webpage, right-click and select **"Snipe Text with AI"**, or press `Alt+S`. The extension will process the text and return a formatted answer.
+* **Crop Sniper:** Press `Alt+C` to activate the crosshair, drag to select an area, and the AI will analyze the cropped image.
 * **Direct Chat:** Open the popup and click **Comms**. Ask any question or paste a screenshot for immediate help.
 * **Panic Mode:** If someone is walking by, hit `Ctrl+Shift+X` (`Cmd+Shift+X` on Mac) or click the red Panic button in the popup. The extension will instantly revert any modified text or buttons back to normal and pause auto-scanning until toggled off.
 
