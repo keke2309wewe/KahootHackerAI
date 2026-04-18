@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'apiKey','model','provider','customUrl','themeColor','rainbowMode',
         'panicMode','styleBold','styleItalic','styleColor','styleFont','styleGhost',
         'cursorStyle','chatSessions','activeChatId','useNushPrompt',
-        'inCost','outCost','visibilityBypass'
+        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort'
     ];
     chrome.storage.local.get(settingsKeys, (data) => {
         if (data.apiKey)    document.getElementById('apiKey').value  = data.apiKey;
@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('outCost').value = data.outCost !== undefined ? data.outCost : 3.00;
 
         document.getElementById('visibilityBypass').checked = data.visibilityBypass === true;
+
+        document.getElementById('useReasoning').checked = data.useReasoning === true;
+        if (data.reasoningEffort) document.getElementById('reasoningEffort').value = data.reasoningEffort;
 
         useNushPrompt.checked = data.useNushPrompt !== false;
 
@@ -225,6 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
             styleGhost:  document.getElementById('styleGhost').checked,
             cursorStyle: document.getElementById('cursorStyle').value,
             visibilityBypass: document.getElementById('visibilityBypass').checked,
+            useReasoning:     document.getElementById('useReasoning').checked,
+            reasoningEffort:  document.getElementById('reasoningEffort').value,
         }, () => {
             const btn = document.getElementById('save');
             btn.innerText = '✓ System Saved';

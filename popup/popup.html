@@ -182,6 +182,25 @@
                 <label class="checkbox-label"><input type="checkbox" id="visibilityBypass"> Tab Visibility Bypass (locks visibilityState to "visible")</label>
             </div>
         </div>
+
+        <div class="section-title">🧠 Reasoning</div>
+
+        <div class="split-input form-group">
+            <div style="flex:1;">
+                <label>Enable</label>
+                <div class="checkbox-grid" style="padding:7px;">
+                    <label class="checkbox-label"><input type="checkbox" id="useReasoning"> Use Reasoning</label>
+                </div>
+            </div>
+            <div style="flex:1;">
+                <label>Effort Level</label>
+                <select id="reasoningEffort">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+        </div>
         
         <button id="save" class="btn-primary">Save Configuration</button>
         <button id="resetTokensBtn" class="btn-secondary">Reset Token Counter</button>
