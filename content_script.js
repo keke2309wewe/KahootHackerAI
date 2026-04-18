@@ -1,58 +1,12 @@
+// ── Kahoot Content Script ─────────────────────────────────────────────────────
+// Depends on: shared_utils.js (loaded first via manifest)
+
+const sysLog = createSysLog('Kahoot');
+
 let isAnalyzing = false;
 let hasAnsweredCurrentQuestion = false;
 let lastLogState = "";
-let scanInterval; 
-
-function sysLog(msg) {
-    try {
-        if (chrome.runtime?.id) {
-            chrome.runtime.sendMessage({ type: "LOG", message: `[Kahoot] ${msg}` });
-        }
-    } catch (e) {
-        if (scanInterval) clearInterval(scanInterval);
-    }
-}
-
-function scrubAllEvidence() {
-    document.querySelectorAll('.ai-stealth, .ai-stealth-ghost').forEach(el => {
-        el.classList.remove('ai-stealth', 'ai-stealth-bold', 'ai-stealth-italic', 'ai-stealth-color', 'ai-stealth-font', 'ai-stealth-ghost');
-        el.style.removeProperty('color');
-        el.style.removeProperty('text-shadow');
-        el.style.removeProperty('cursor');
-    });
-}
-
-function applyStealthStyles(targetEl) {
-    chrome.storage.local.get(['styleBold', 'styleItalic', 'styleColor', 'styleFont', 'styleGhost', 'cursorStyle', 'themeColor', 'rainbowMode'], (data) => {
-        if (data.styleBold !== false) targetEl.classList.add('ai-stealth-bold');
-        if (data.styleItalic) targetEl.classList.add('ai-stealth-italic');
-        if (data.styleFont) targetEl.classList.add('ai-stealth-font');
-        
-        if (data.styleColor) {
-            if (data.rainbowMode) {
-                // Dynamically build the rainbow animation if it doesn't exist
-                if (!document.getElementById('ai-rainbow-style')) {
-                    const style = document.createElement('style');
-                    style.id = 'ai-rainbow-style';
-                    style.innerHTML = `@keyframes ai-rainbow-pulse { 0% {color: #ff0000; text-shadow: 0 0 5px #ff0000;} 16% {color: #ffff00; text-shadow: 0 0 5px #ffff00;} 33% {color: #00ff00; text-shadow: 0 0 5px #00ff00;} 50% {color: #00ffff; text-shadow: 0 0 5px #00ffff;} 66% {color: #0000ff; text-shadow: 0 0 5px #0000ff;} 83% {color: #ff00ff; text-shadow: 0 0 5px #ff00ff;} 100% {color: #ff0000; text-shadow: 0 0 5px #ff0000;} } .ai-stealth-rainbow { animation: ai-rainbow-pulse 3s linear infinite !important; }`;
-                    document.head.appendChild(style);
-                }
-                targetEl.classList.add('ai-stealth-rainbow');
-            } else {
-                const hex = data.themeColor || '#00ff00';
-                targetEl.style.setProperty('color', hex, 'important');
-                targetEl.style.setProperty('text-shadow', '1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9)', 'important');
-            }
-        }
-        
-        if (data.styleGhost) {
-            targetEl.classList.add('ai-stealth-ghost');
-            targetEl.style.setProperty('cursor', data.cursorStyle || 'text', 'important');
-        }
-        
-        targetEl.classList.add('ai-stealth'); 
-    });
-}
+let scanInterval;
 
 sysLog("Content script injected at: " + window.location.href);
 
@@ -73,14 +27,14 @@ function scanForGameBoard() {
         }
 
         chrome.storage.local.get(['panicMode'], (data) => {
-            if (chrome.runtime.lastError) return; 
+            if (chrome.runtime.lastError) return;
 
             if (data.panicMode) {
                 if (lastLogState !== "panic") {
                     sysLog("Panic mode active. Scanning paused.");
                     lastLogState = "panic";
                 }
-                return; 
+                return;
             }
 
             const url = window.location.href;
@@ -110,7 +64,8 @@ function scanForGameBoard() {
             }
 
             if ((answerBlocks.length >= 2 || isGameBlock) && !isAnalyzing && !hasAnsweredCurrentQuestion) {
-                const bodyText = document.body.innerText.toLowerCase();
+                // textContent is cheaper than innerText (no layout reflow)
+                const bodyText = document.body.textContent.toLowerCase();
                 if (bodyText.includes("time's up") || bodyText.includes("correct") || bodyText.includes("incorrect")) {
                     return;
                 }
@@ -119,7 +74,7 @@ function scanForGameBoard() {
                 isAnalyzing = true;
 
                 chrome.runtime.sendMessage({ type: "REQUEST_SCREENSHOT_ANALYSIS", platform: "kahoot" }, (response) => {
-                    isAnalyzing = false; 
+                    isAnalyzing = false;
                     if (chrome.runtime.lastError) {
                         sysLog("Connection error: " + chrome.runtime.lastError.message);
                         return;
@@ -128,7 +83,7 @@ function scanForGameBoard() {
                     chrome.storage.local.get(['panicMode'], (lateData) => {
                         if (!lateData.panicMode && response && response.winningColor) {
                             highlightByColor(response.winningColor);
-                            hasAnsweredCurrentQuestion = true; 
+                            hasAnsweredCurrentQuestion = true;
                         } else if (response && response.error) {
                             sysLog("AI Error: " + response.error);
                         }
@@ -154,7 +109,7 @@ function highlightByColor(colorStr) {
     }
 
     let targetEl = document.querySelector(`[data-functional-selector="answer-${targetIndex}"]`);
-    
+
     if (!targetEl) {
         sysLog("Standard tags missing. Using fallback selection.");
         const blocks = document.querySelectorAll('button[aria-label], [data-functional-selector*="question-choice"]');
@@ -162,7 +117,7 @@ function highlightByColor(colorStr) {
             targetEl = blocks[targetIndex];
         }
     }
-    
+
     if (targetEl) {
         applyStealthStyles(targetEl);
         sysLog(`Formatted ${colorStr} block.`);

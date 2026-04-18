@@ -203,6 +203,7 @@
         </div>
         
         <button id="save" class="btn-primary">Save Configuration</button>
+        <button id="testConnectionBtn" class="btn-secondary">Test Connection</button>
         <button id="resetTokensBtn" class="btn-secondary">Reset Token Counter</button>
 
         <div class="log-container">
@@ -218,9 +219,15 @@
         <p style="font-size:11px; color:#666; margin: 0 0 12px;">Edit the system instructions sent to the AI. Leave blank to use the built-in default.</p>
 
         <div class="prompt-group">
-            <div class="prompt-label">🎮 Kahoot / Naurok Vision Prompt</div>
-            <div class="prompt-hint">Used for automated screenshot analysis. Must ask AI to reply RED/BLUE/YELLOW/GREEN.</div>
+            <div class="prompt-label">🎮 Kahoot Vision Prompt</div>
+            <div class="prompt-hint">Used for Kahoot screenshot analysis. Must ask AI to reply RED/BLUE/YELLOW/GREEN.</div>
             <textarea class="prompt-box" id="promptKahoot" rows="5" placeholder="Leave blank for default..."></textarea>
+        </div>
+
+        <div class="prompt-group">
+            <div class="prompt-label">📝 Naurok Vision Prompt</div>
+            <div class="prompt-hint">Used for Naurok screenshot analysis. Must ask AI to reply RED/YELLOW/BLUE/GREEN.</div>
+            <textarea class="prompt-box" id="promptNaurok" rows="5" placeholder="Leave blank for default..."></textarea>
         </div>
 
         <div class="prompt-group">

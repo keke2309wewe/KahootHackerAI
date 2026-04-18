@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Load Saved Prompts ──────────────────────────────────────────────────
-    const promptKeys = ['promptKahoot','promptClasstime','promptSniper','promptCrop','promptChat'];
+    const promptKeys = ['promptKahoot','promptNaurok','promptClasstime','promptSniper','promptCrop','promptChat'];
     chrome.storage.local.get(promptKeys, (data) => {
         promptKeys.forEach(k => {
             const el = document.getElementById(k);
@@ -235,6 +235,49 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerText = '✓ System Saved';
             setTimeout(() => { btn.innerText = 'Save Configuration'; }, 1500);
         });
+    });
+
+    // ── Test Connection ──────────────────────────────────────────────────────
+    document.getElementById('testConnectionBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('testConnectionBtn');
+        btn.innerText = 'Testing...';
+        btn.disabled = true;
+        try {
+            const data = await chrome.storage.local.get(['apiKey', 'model', 'provider', 'customUrl']);
+            if (!data.apiKey) throw new Error('API Key not set');
+
+            const endpoint = buildEndpoint(data.provider, data.customUrl);
+            const headers  = buildHeaders(data.apiKey, data.provider);
+
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    model: data.model || 'google/gemini-2.5-flash',
+                    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+                    temperature: 0,
+                    max_tokens: 5
+                })
+            });
+
+            if (!resp.ok) {
+                const errJson = await resp.json().catch(() => ({}));
+                throw new Error(errJson.error?.message || `HTTP ${resp.status}`);
+            }
+            const json = await resp.json();
+            if (!json.choices?.[0]) throw new Error(json.error?.message || 'Invalid response');
+
+            btn.innerText = '✓ Connected — ' + json.choices[0].message.content.trim();
+            btn.style.borderColor = 'var(--accent)';
+        } catch (err) {
+            btn.innerText = '✗ ' + err.message;
+            btn.style.borderColor = '#ff3333';
+        }
+        btn.disabled = false;
+        setTimeout(() => {
+            btn.innerText = 'Test Connection';
+            btn.style.borderColor = '';
+        }, 4000);
     });
 
     // ── Multi-Chat Engine ────────────────────────────────────────────────────
@@ -352,9 +395,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.kind === 'file' && item.type.startsWith('image/')) {
                 const blob = item.getAsFile();
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     const session = getActiveSession();
-                    injectSystemPromptIfNeeded(session);
+                    await injectSystemPromptIfNeeded(session);
                     session.messages.push({
                         role: 'user',
                         content: [
@@ -381,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sendChatBtn.disabled = true;
 
         const session = getActiveSession();
-        injectSystemPromptIfNeeded(session);
+        await injectSystemPromptIfNeeded(session);
         session.messages.push({ role: 'user', content: text });
         saveChats();
         renderChat();
@@ -390,11 +433,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function injectSystemPromptIfNeeded(session) {
-        if (session.messages.length > 0) return;
-        if (!useNushPrompt.checked) return;
-        chrome.storage.local.get(['promptChat'], (data) => {
-            const defaultPrompt = 'You are a helper for an 8th-grade student in Ukraine (НУШ). Reply ONLY in Ukrainian. Be brief.';
-            session.messages.push({ role: 'system', content: data.promptChat || defaultPrompt });
+        return new Promise((resolve) => {
+            if (session.messages.length > 0 || !useNushPrompt.checked) {
+                resolve();
+                return;
+            }
+            chrome.storage.local.get(['promptChat'], (data) => {
+                const defaultPrompt = 'You are a helper for an 8th-grade student in Ukraine (НУШ). Reply ONLY in Ukrainian. Be brief.';
+                session.messages.push({ role: 'system', content: data.promptChat || defaultPrompt });
+                resolve();
+            });
         });
     }
 

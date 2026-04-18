@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Multi-Platform AI Stealth",
-  "version": "4.1",
-  "permissions": ["tabs", "scripting", "storage", "webNavigation", "contextMenus", "desktopCapture"],
+  "version": "4.3",
+  "permissions": ["tabs", "scripting", "storage", "webNavigation", "contextMenus"],
   "host_permissions": [
     "<all_urls>"
   ],
@@ -12,7 +12,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.kahoot.it/*"],
-      "js": ["content_script.js"],
+      "js": ["shared_utils.js", "content_script.js"],
       "css": ["styles/inject.css"],
       "run_at": "document_end",
       "all_frames": true
@@ -22,14 +22,14 @@
         "*://*.naurok.com.ua/test/*",
         "*://*.naurok.ua/test/*"
       ],
-      "js": ["content_script_naurok.js"],
+      "js": ["shared_utils.js", "content_script_naurok.js"],
       "css": ["styles/inject.css"],
       "run_at": "document_end",
       "all_frames": true
     },
     {
       "matches": ["*://*.classtime.com/*"],
-      "js": ["content_script_classtime.js"],
+      "js": ["shared_utils.js", "content_script_classtime.js"],
       "css": ["styles/inject.css"],
       "run_at": "document_end",
       "all_frames": true

@@ -71,6 +71,7 @@ function accumulateTokens(usage) {
 // ── Default Prompts ───────────────────────────────────────────────────────────
 const DEFAULTS = {
     promptKahoot:   "You are a Kahoot player. Look at this screenshot of a Kahoot game. Read the question and the four answers provided in the colored boxes (Red Triangle, Blue Diamond, Yellow Circle, Green Square). Determine the correct answer. Output ONLY the color of the correct answer box. Your response must be exactly one word: RED, BLUE, YELLOW, or GREEN.",
+    promptNaurok:   "Look at this screenshot of a Naurok quiz. Read the question and the four answer options displayed in colored boxes from left to right: Pink/Red, Yellow/Orange, Light Blue, Light Green. Determine the correct answer. Output ONLY the color of the correct answer box. Your response must be exactly one word: RED, YELLOW, BLUE, or GREEN.",
     promptClasstime:"Look at this screenshot of a quiz. Read the question and the available text options. Determine the correct answer. Output ONLY the number of the correct option, counting from the top down (1 for the first option, 2 for the second, etc.). Your response must be exactly one digit (e.g., 1, 2, 3, or 4).",
     promptSniper:   "You are a helper for an 8th-grade student in Ukraine (НУШ). Reply ONLY in Ukrainian. If it is a general question, give the shortest possible correct answer. If it is a math, algebra, or physics problem, provide the clear step-by-step solution so it can be copied into a notebook. Use '-' instead of long dashes. Do not use markdown formatting like bolding or headers, just plain text.",
     promptCrop:     "Look at this cropped image from a test or assignment. It may contain a math problem, a graph, or text. Solve the problem or answer the question shown. Give ONLY the final answer or the essential steps if it's math. Keep it extremely concise. Reply in Ukrainian.",
@@ -130,13 +131,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 return;
             }
             writeLog('Screenshot acquired. Querying AI...');
-            analyzeImage(dataUrl, request.platform)
+            analyzeImageWithRetry(dataUrl, request.platform)
                 .then(answer => {
                     writeLog(`AI answer: ${answer}`);
                     sendResponse({ winningColor: answer });
                 })
                 .catch(err => {
-                    writeLog(`API Error: ${err.message}`);
+                    writeLog(`API Error (after retry): ${err.message}`);
                     sendResponse({ error: err.message });
                 });
         });
@@ -174,14 +175,33 @@ function broadcastToActiveTab(msg) {
     });
 }
 
+// ── Retry Wrapper ─────────────────────────────────────────────────────────────
+async function analyzeImageWithRetry(base64Image, platform, retries = 1) {
+    try {
+        return await analyzeImage(base64Image, platform);
+    } catch (err) {
+        if (retries > 0) {
+            writeLog(`AI failed: ${err.message}. Retrying in 2s...`);
+            await new Promise(r => setTimeout(r, 2000));
+            return analyzeImageWithRetry(base64Image, platform, retries - 1);
+        }
+        throw err;
+    }
+}
+
 // ── Image Analysis (Kahoot / Classtime / Naurok) ──────────────────────────────
 async function analyzeImage(base64Image, platform) {
     const data = await getApiConfig();
     if (!data.apiKey) throw new Error('API Key missing');
 
-    const promptText = platform === 'classtime'
-        ? await getPrompt('promptClasstime')
-        : await getPrompt('promptKahoot');
+    let promptText;
+    if (platform === 'classtime') {
+        promptText = await getPrompt('promptClasstime');
+    } else if (platform === 'naurok') {
+        promptText = await getPrompt('promptNaurok');
+    } else {
+        promptText = await getPrompt('promptKahoot');
+    }
 
     const payload = applyReasoning({
         model:       data.model || 'google/gemini-2.5-flash',
@@ -229,11 +249,26 @@ async function processTextSniper(text, tabId) {
     try {
         const answer = await analyzeTextOnly(text);
         chrome.tabs.sendMessage(tabId, { type: 'SNIPER_RESULT', result: answer });
+        storeSniperResult(text, answer);
         writeLog('Text snipe successful.');
     } catch (err) {
         chrome.tabs.sendMessage(tabId, { type: 'SNIPER_ERROR', error: err.message });
         writeLog(`Text snipe error: ${err.message}`);
     }
+}
+
+// ── Sniper History ────────────────────────────────────────────────────────────
+function storeSniperResult(question, answer) {
+    chrome.storage.local.get(['sniperHistory'], (data) => {
+        const history = data.sniperHistory || [];
+        history.unshift({
+            q: question.substring(0, 200),
+            a: answer.substring(0, 500),
+            time: new Date().toLocaleTimeString()
+        });
+        if (history.length > 30) history.length = 30;
+        chrome.storage.local.set({ sniperHistory: history });
+    });
 }
 
 async function analyzeTextOnly(textQuery) {
