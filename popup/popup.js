@@ -104,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'apiKey','model','provider','customUrl','themeColor','rainbowMode',
         'panicMode','styleBold','styleItalic','styleColor','styleFont','styleGhost',
         'cursorStyle','chatSessions','activeChatId','useNushPrompt',
-        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort'
+        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort',
+        'blooketMode'
     ];
     chrome.storage.local.get(settingsKeys, (data) => {
         if (data.apiKey)    document.getElementById('apiKey').value  = data.apiKey;
@@ -137,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('useReasoning').checked = data.useReasoning === true;
         if (data.reasoningEffort) document.getElementById('reasoningEffort').value = data.reasoningEffort;
+
+        if (data.blooketMode) document.getElementById('blooketMode').value = data.blooketMode;
 
         useNushPrompt.checked = data.useNushPrompt !== false;
 
@@ -230,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             visibilityBypass: document.getElementById('visibilityBypass').checked,
             useReasoning:     document.getElementById('useReasoning').checked,
             reasoningEffort:  document.getElementById('reasoningEffort').value,
+            blooketMode:      document.getElementById('blooketMode').value,
         }, () => {
             const btn = document.getElementById('save');
             btn.innerText = '✓ System Saved';
@@ -278,6 +282,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerText = 'Test Connection';
             btn.style.borderColor = '';
         }, 4000);
+    });
+
+    // ── Clear Blooket Memory ─────────────────────────────────────────────────
+    document.getElementById('clearBlooketMemoryBtn').addEventListener('click', () => {
+        chrome.storage.local.set({ blooketMemory: {} }, () => {
+            const btn = document.getElementById('clearBlooketMemoryBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '✓ Memory Cleared';
+            setTimeout(() => { btn.innerText = originalText; }, 1500);
+        });
     });
 
     // ── Multi-Chat Engine ────────────────────────────────────────────────────

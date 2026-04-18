@@ -166,6 +166,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return false;
     }
+
+    if (request.type === 'SAVE_BLOOKET_ANSWER') {
+        chrome.storage.local.get(['blooketMemory'], (data) => {
+            const mem = data.blooketMemory || {};
+            if (mem[request.question] !== request.answer) {
+                mem[request.question] = request.answer;
+                chrome.storage.local.set({ blooketMemory: mem });
+                writeLog(`Blooket memory saved: Q="${request.question.substring(0, 20)}..." A="${request.answer}"`);
+            }
+        });
+        return false;
+    }
 });
 
 // ── Broadcast Helper ──────────────────────────────────────────────────────────
@@ -200,6 +212,7 @@ async function analyzeImage(base64Image, platform) {
     } else if (platform === 'naurok') {
         promptText = await getPrompt('promptNaurok');
     } else {
+        // Kahoot and Blooket share the same 4-box color layout prompt
         promptText = await getPrompt('promptKahoot');
     }
 

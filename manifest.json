@@ -35,6 +35,20 @@
       "all_frames": true
     },
     {
+      "matches": ["*://*.blooket.com/*"],
+      "js": ["blooket_react_hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.blooket.com/*"],
+      "js": ["shared_utils.js", "content_script_blooket.js"],
+      "css": ["styles/inject.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    },
+    {
       "matches": ["<all_urls>"],
       "js": ["content_script_universal.js"],
       "css": ["styles/inject.css"],
