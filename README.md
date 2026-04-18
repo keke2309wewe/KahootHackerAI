@@ -2,7 +2,14 @@
 
 A stealthy, AI-powered browser extension designed to secretly solve online quizzes using vision models. It runs entirely in the background, takes screenshots of active quizzes, and highlights the correct answers using nearly invisible CSS modifications to avoid detection.
 
-## 🚀 Features
+## 🚀 What's New in V2 (Engine v4.3)
+* **Built-in Chat & Comms Hub:** A brand new "Comms" tab in the popup. Directly chat with your AI, paste images (`Ctrl+V`), and manage multiple chat sessions.
+* **Custom AI Prompts:** A dedicated "Prompts" tab to completely rewrite the system instructions. Change how the AI solves Kahoot, how it replies to text snipes, or customize its persona.
+* **Tab Visibility Bypass:** An anti-detection feature that locks the browser's `visibilityState` to "visible", preventing quiz sites from knowing when you switch tabs.
+* **Reasoning Model Support:** Built-in support for AI models that use "reasoning effort" (e.g., `gemini-2.0-pro-exp`).
+* **Advanced Stealth Styling:** Added a Color Picker for custom stealth colors, "Rainbow Mode", and "Ghost Cursor" (hide your cursor or change it to an I-beam over the correct answer).
+
+## 🌟 Core Features
 
 * **Visual AI Processing:** Instead of reading the DOM (which is easily broken by site updates), the extension takes a screenshot of the quiz and sends it to a Vision AI model (like Gemini 2.5 Flash) to determine the answer.
 * **Stealth Highlights:** Applies subtle CSS classes (like Ghost Ink, Eggshell Color, or Slight Bold) to the correct answer, meaning only you know what to look for. No obvious red arrows or popups!
@@ -39,15 +46,18 @@ Before the extension can solve anything, you need to provide it with an AI brain
    * Select your **API Provider** (OpenRouter, OpenAI, or Custom).
    * Paste your **API Key**.
    * Leave the **AI Model** as `google/gemini-2.5-flash` (recommended for speed and cost), or change it if you prefer.
-3. **Set Stealth Styling:**
-   * Choose how you want the correct answer to be highlighted. 
-   * *Tip:* **Ghost Ink** is the most secure; it will only appear if you know exactly how to look for it.
+3. **Set Stealth Styling & Anti-Detection:**
+   * Choose how you want the correct answer to be highlighted (e.g. Ghost Ink, Custom Color, Rainbow mode). 
+   * Turn on **Tab Visibility Bypass** if you're taking a strict test that tracks tab switching.
+4. **Tweak Prompts (Optional):**
+   * Go to the **Prompts** tab if you want to modify how the AI thinks or formats its answers.
 
 ## 🎮 How to Use
 
 * **Auto-Solve (Kahoot, Naurok, Classtime):** Simply play the game normally. When the question appears and the answer boxes load, the extension will automatically analyze the screen and apply your chosen Stealth Style to the correct box.
 * **Text Sniper:** Highlight any text on any webpage, right-click, and select **"Snipe Text with AI"**. The extension will process the text and return an answer discretely.
-* **Panic Mode:** If someone is walking by, hit `Ctrl+Shift+X` (`Cmd+Shift+X` on Mac). The extension will instantly revert any modified text or buttons back to normal and pause auto-scanning until toggled off.
+* **Direct Chat:** Open the popup and click **Comms**. Ask any question or paste a screenshot for immediate help.
+* **Panic Mode:** If someone is walking by, hit `Ctrl+Shift+X` (`Cmd+Shift+X` on Mac) or click the red Panic button in the popup. The extension will instantly revert any modified text or buttons back to normal and pause auto-scanning until toggled off.
 
 ---
 *Disclaimer: This tool is intended for educational and proof-of-concept purposes. Use responsibly.*
