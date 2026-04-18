@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Multi-Platform AI Stealth",
+  "version": "4.0",
+  "permissions": ["tabs", "scripting", "storage", "webNavigation", "contextMenus"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.kahoot.it/*"],
+      "js": ["content_script.js"],
+      "css": ["styles/inject.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "*://*.naurok.com.ua/test/*",
+        "*://*.naurok.ua/test/*"
+      ],
+      "js": ["content_script_naurok.js"],
+      "css": ["styles/inject.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.classtime.com/*"],
+      "js": ["content_script_classtime.js"],
+      "css": ["styles/inject.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script_universal.js"],
+      "css": ["styles/inject.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "commands": {
+    "toggle-panic": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+X",
+        "mac": "Command+Shift+X"
+      },
+      "description": "Toggle Panic Mode"
+    }
+  }
+}
