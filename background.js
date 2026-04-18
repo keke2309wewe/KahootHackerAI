@@ -32,8 +32,19 @@ async function getApiConfig() {
 }
 
 function applyReasoning(payload, data) {
-    if (data.useReasoning) {
-        payload.reasoning = { effort: data.reasoningEffort || 'medium', exclude: true };
+    if (!data.useReasoning) return payload;
+    const effort = data.reasoningEffort || 'medium';
+    const provider = data.provider || 'openrouter';
+
+    if (provider === 'openai') {
+        // OpenAI o-series models use a top-level reasoning_effort param
+        payload.reasoning_effort = effort;
+    } else if (provider === 'custom') {
+        // Custom endpoints — skip reasoning to avoid breaking unknown APIs
+        writeLog('Reasoning skipped for custom provider.');
+    } else {
+        // OpenRouter format
+        payload.reasoning = { effort: effort, exclude: true };
     }
     return payload;
 }
@@ -42,6 +53,13 @@ function accumulateTokens(usage) {
     if (!usage) return;
     const inT  = usage.prompt_tokens     || 0;
     const outT = usage.completion_tokens || 0;
+
+    // Log reasoning tokens if present (for transparency in logs)
+    const details = usage.completion_tokens_details;
+    if (details && details.reasoning_tokens) {
+        writeLog(`Reasoning tokens used: ${details.reasoning_tokens}`);
+    }
+
     chrome.storage.local.get(['inputTokens', 'outputTokens'], (d) => {
         chrome.storage.local.set({
             inputTokens:  (d.inputTokens  || 0) + inT,

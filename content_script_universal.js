@@ -1,13 +1,30 @@
 // ── Sniper Toast Notification ─────────────────────────────────────────────────
 let sniperToast = null;
 
+function parseSniperMarkdown(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')  // XSS-safe
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')                               // **bold**
+        .replace(/\*(.*?)\*/g, '<i>$1</i>')                                    // *italic*
+        .replace(/\$\$(.*?)\$\$/g, '<code class="sniper-math">$1</code>')      // $$math$$
+        .replace(/\$(.*?)\$/g, '<code class="sniper-math">$1</code>')          // $math$
+        .replace(/`(.*?)`/g, '<code class="sniper-code">$1</code>')            // `code`
+        .replace(/\n/g, '<br>');                                                // newlines
+}
+
 function showSniperToast(msg, status = 'success') {
     if (sniperToast) sniperToast.remove();
 
     sniperToast = document.createElement('div');
     sniperToast.id = 'ai-sniper-toast';
     sniperToast.className = status === 'error' ? 'ai-error' : (status === 'loading' ? 'ai-loading' : '');
-    sniperToast.innerText = msg;
+
+    if (status === 'loading') {
+        sniperToast.innerText = msg;
+    } else {
+        sniperToast.innerHTML = parseSniperMarkdown(msg);
+    }
 
     sniperToast.addEventListener('click', () => {
         if (sniperToast) { sniperToast.remove(); sniperToast = null; }

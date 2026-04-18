@@ -407,20 +407,33 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
-            const data = await chrome.storage.local.get(['apiKey', 'model', 'provider', 'customUrl', 'inCost', 'outCost']);
+            const data = await chrome.storage.local.get(['apiKey', 'model', 'provider', 'customUrl', 'inCost', 'outCost', 'useReasoning', 'reasoningEffort']);
             if (!data.apiKey) throw new Error('API Key not set. Configure it in Settings.');
 
             const endpoint = buildEndpoint(data.provider, data.customUrl);
             const headers  = buildHeaders(data.apiKey, data.provider);
 
+            let payload = {
+                model:       data.model || 'google/gemini-2.5-flash',
+                messages:    session.messages,
+                temperature: 0.5
+            };
+
+            // Apply provider-aware reasoning
+            if (data.useReasoning) {
+                const effort = data.reasoningEffort || 'medium';
+                const provider = data.provider || 'openrouter';
+                if (provider === 'openai') {
+                    payload.reasoning_effort = effort;
+                } else if (provider !== 'custom') {
+                    payload.reasoning = { effort: effort, exclude: true };
+                }
+            }
+
             const resp = await fetch(endpoint, {
                 method:  'POST',
                 headers: headers,
-                body: JSON.stringify({
-                    model:       data.model || 'google/gemini-2.5-flash',
-                    messages:    session.messages,
-                    temperature: 0.5
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!resp.ok) {
