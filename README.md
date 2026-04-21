@@ -2,20 +2,25 @@
 
 A stealthy, AI-powered browser extension designed to secretly solve online quizzes using vision models. It runs entirely in the background, takes screenshots of active quizzes, and highlights the correct answers using nearly invisible CSS modifications to avoid detection.
 
-## 🚀 What's New in V4.3
+## 🚀 What's New in v4.7
+
+* **Sniper History Panel:** A new 📋 tab in the popup lets you browse all past Text Sniper and Crop Sniper Q&A results. Click any entry to expand the full answer. Clear all history with one button.
+* **OpenRouter Live Cost Estimator:** The stats panel now automatically fetches live $/1M pricing for your exact model directly from the OpenRouter API and displays a real-time cost breakdown. Falls back to manual values for OpenAI / Custom providers.
+* **Smarter Token Display:** The settings panel now shows In tokens, Out tokens, $/1M rates (OpenRouter only), and total estimated spend — all in one clean panel.
+
+## 🚀 What Was New in v4.3
 
 * **Shared Utility Architecture:** All platform content scripts now use a single shared utility file (`shared_utils.js`), eliminating code duplication and making updates easier.
 * **Naurok-Specific AI Prompt:** Naurok now gets its own vision prompt that correctly describes its color layout (Pink → Yellow → Blue → Green), improving accuracy.
 * **Retry on AI Failure:** If the AI fails on a screenshot analysis, the extension automatically retries once after 2 seconds before giving up.
 * **Test Connection Button:** A new button in the popup to instantly verify your API key, model, and endpoint are working — no more guessing.
-* **Sniper History:** All Text Sniper results are now saved in storage (up to 30 entries) so you can recall past answers.
 * **Race Condition Fix:** The chat system prompt injection is now properly async, preventing potential message ordering bugs.
 * **Performance Fix:** Kahoot's scanner now uses `textContent` instead of `innerText`, avoiding expensive layout reflows every second.
 * **Permission Cleanup:** Removed the unused `desktopCapture` permission — fewer scary warnings on install.
 
 ## 🌟 Core Features
 
-* **Visual AI Processing:** Instead of reading the DOM (which is easily broken by site updates), the extension takes a screenshot of the quiz and sends it to a Vision AI model (like Gemini 2.5 Flash) to determine the answer.
+* **Visual AI Processing:** Instead of reading the DOM (which is easily broken by site updates), the extension takes a screenshot of the quiz and sends it to a Vision AI model to determine the answer. The current recommended model is **`google/gemini-2.5-flash-preview-05-20`** (Gemini 3 Flash Preview) — it is significantly more accurate than Gemini 2.5 Flash, especially when **Reasoning is enabled at Medium effort**. Note that reasoning adds a few extra seconds to the response time, so expect a slightly longer wait before the answer appears.
 * **Stealth Highlights:** Applies subtle CSS classes (like Ghost Ink, Eggshell Color, or Slight Bold) to the correct answer, meaning only you know what to look for. No obvious red arrows or popups!
 * **Multi-Platform Support:** Works out of the box with Kahoot, Classtime, and Naurok.
 * **Universal "Sniper" Mode:** Right-click any text on any website to send it to the AI for an instant, discrete answer. Also supports cropped area captures. Results are rendered with **bold**, *italic*, and math formatting.
@@ -53,7 +58,8 @@ Before the extension can solve anything, you need to provide it with an AI brain
    * Click the extension icon in your browser toolbar to open the popup.
    * Select your **API Provider** (OpenRouter, OpenAI, or Custom).
    * Paste your **API Key**.
-   * Leave the **AI Model** as `google/gemini-2.5-flash` (recommended for speed and cost), or change it if you prefer.
+   * Leave the **AI Model** as `google/gemini-2.5-flash-preview-05-20` (Gemini 3 Flash Preview — **recommended**, best accuracy). You can also use `google/gemini-2.5-flash` for a slightly faster but less accurate result.
+   * **Tip:** Turn on **Reasoning** at **Medium** effort for a major accuracy boost. Be aware this adds a few extra seconds to each answer — that's normal.
 3. **Test Your Connection:**
    * Click the **Test Connection** button. If you see "✓ Connected", you're good to go!
 4. **Set Stealth Styling & Anti-Detection:**
