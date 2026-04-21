@@ -58,7 +58,7 @@ Before the extension can solve anything, you need to provide it with an AI brain
    * Click the extension icon in your browser toolbar to open the popup.
    * Select your **API Provider** (OpenRouter, OpenAI, or Custom).
    * Paste your **API Key**.
-   * Leave the **AI Model** as `google/gemini-2.5-flash-preview-05-20` (Gemini 3 Flash Preview — **recommended**, best accuracy). You can also use `google/gemini-2.5-flash` for a slightly faster but less accurate result.
+   * Leave the **AI Model** as `google/gemini-3-flash-preview` (Gemini 3 Flash Preview — **recommended**, best accuracy). You can also use `google/gemini-2.5-flash` for a slightly faster but less accurate result.
    * **Tip:** Turn on **Reasoning** at **Medium** effort for a major accuracy boost. Be aware this adds a few extra seconds to each answer — that's normal.
 3. **Test Your Connection:**
    * Click the **Test Connection** button. If you see "✓ Connected", you're good to go!
