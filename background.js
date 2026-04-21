@@ -205,7 +205,7 @@ async function analyzeImage(base64Image, platform) {
     }
 
     const payload = applyReasoning({
-        model:       data.model || 'google/gemini-2.5-flash',
+        model:       data.model || 'google/gemini-3-flash-preview',
         messages: [{
             role: 'user',
             content: [
@@ -279,7 +279,7 @@ async function analyzeTextOnly(textQuery) {
     const promptText = await getPrompt('promptSniper');
 
     const payload = applyReasoning({
-        model:       data.model || 'google/gemini-2.5-flash',
+        model:       data.model || 'google/gemini-3-flash-preview',
         messages: [
             { role: 'system', content: promptText },
             { role: 'user',   content: textQuery }
@@ -352,7 +352,7 @@ async function analyzeCroppedImage(base64Crop) {
     const promptText = await getPrompt('promptCrop');
 
     const payload = applyReasoning({
-        model:       data.model || 'google/gemini-2.5-flash',
+        model:       data.model || 'google/gemini-3-flash-preview',
         messages: [{
             role: 'user',
             content: [

@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _orPriceCache = null; // invalidate cache so new model price is fetched
         chrome.storage.local.set({
             apiKey:      document.getElementById('apiKey').value.trim(),
-            model:       document.getElementById('model').value.trim() || 'google/gemini-2.5-flash',
+            model:       document.getElementById('model').value.trim() || 'google/gemini-3-flash-preview',
             provider:    providerSelect.value,
             customUrl:   document.getElementById('customUrl').value.trim(),
             inCost:      parseFloat(document.getElementById('inCost').value)  || 0,
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify({
-                    model: data.model || 'google/gemini-2.5-flash',
+                    model: data.model || 'google/gemini-3-flash-preview',
                     messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
                     temperature: 0,
                     max_tokens: 5
@@ -588,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const headers  = buildHeaders(data.apiKey, data.provider);
 
             let payload = {
-                model:       data.model || 'google/gemini-2.5-flash',
+                model:       data.model || 'google/gemini-3-flash-preview',
                 messages:    session.messages,
                 temperature: 0.5
             };

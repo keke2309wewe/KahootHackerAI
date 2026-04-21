@@ -20,7 +20,7 @@ A stealthy, AI-powered browser extension designed to secretly solve online quizz
 
 ## 🌟 Core Features
 
-* **Visual AI Processing:** Instead of reading the DOM (which is easily broken by site updates), the extension takes a screenshot of the quiz and sends it to a Vision AI model to determine the answer. The current recommended model is **`google/gemini-2.5-flash-preview-05-20`** (Gemini 3 Flash Preview) — it is significantly more accurate than Gemini 2.5 Flash, especially when **Reasoning is enabled at Medium effort**. Note that reasoning adds a few extra seconds to the response time, so expect a slightly longer wait before the answer appears.
+* **Visual AI Processing:** Instead of reading the DOM (which is easily broken by site updates), the extension takes a screenshot of the quiz and sends it to a Vision AI model to determine the answer. The current recommended model is **`google/gemini-3-flash-preview`** — it is significantly more accurate than older Flash models, especially when **Reasoning is enabled at Medium effort**. Note that reasoning adds a few extra seconds to the response time, so expect a slightly longer wait before the answer appears.
 * **Stealth Highlights:** Applies subtle CSS classes (like Ghost Ink, Eggshell Color, or Slight Bold) to the correct answer, meaning only you know what to look for. No obvious red arrows or popups!
 * **Multi-Platform Support:** Works out of the box with Kahoot, Classtime, and Naurok.
 * **Universal "Sniper" Mode:** Right-click any text on any website to send it to the AI for an instant, discrete answer. Also supports cropped area captures. Results are rendered with **bold**, *italic*, and math formatting.
@@ -58,7 +58,7 @@ Before the extension can solve anything, you need to provide it with an AI brain
    * Click the extension icon in your browser toolbar to open the popup.
    * Select your **API Provider** (OpenRouter, OpenAI, or Custom).
    * Paste your **API Key**.
-   * Leave the **AI Model** as `google/gemini-2.5-flash-preview-05-20` (Gemini 3 Flash Preview — **recommended**, best accuracy). You can also use `google/gemini-2.5-flash` for a slightly faster but less accurate result.
+   * Leave the **AI Model** as `google/gemini-3-flash-preview` (recommended, best accuracy). You can also use `google/gemini-2.0-flash-exp` for a slightly faster but less accurate result.
    * **Tip:** Turn on **Reasoning** at **Medium** effort for a major accuracy boost. Be aware this adds a few extra seconds to each answer — that's normal.
 3. **Test Your Connection:**
    * Click the **Test Connection** button. If you see "✓ Connected", you're good to go!
