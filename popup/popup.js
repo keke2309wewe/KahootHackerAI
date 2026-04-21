@@ -18,11 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── View Navigation ─────────────────────────────────────────────────────
     const views = {
         settings: document.getElementById('settingsView'),
+        history:  document.getElementById('historyView'),
         prompts:  document.getElementById('promptsView'),
         chat:     document.getElementById('chatView'),
     };
     const navBtns = {
         settings: document.getElementById('navSettingsBtn'),
+        history:  document.getElementById('navHistoryBtn'),
         prompts:  document.getElementById('navPromptsBtn'),
         chat:     document.getElementById('toggleChatBtn'),
     };
@@ -38,9 +40,13 @@ document.addEventListener('DOMContentLoaded', () => {
             renderChat();
             setTimeout(() => chatInput.focus(), 100);
         }
+        if (name === 'history') {
+            renderHistory();
+        }
     }
 
     navBtns.settings.addEventListener('click', () => showView('settings'));
+    navBtns.history.addEventListener('click',  () => showView('history'));
     navBtns.prompts.addEventListener('click',  () => showView('prompts'));
     navBtns.chat.addEventListener('click',     () => showView('chat'));
     document.getElementById('backToSettings').addEventListener('click', () => showView('settings'));
@@ -74,30 +80,147 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.set({ inputTokens: 0, outputTokens: 0 }, refreshData);
     });
 
+    // ── OpenRouter pricing cache ─────────────────────────────────────────────
+    let _orPriceCache = null;  // { prompt: number, completion: number } in $/token
+    let _orPriceFetching = false;
+
+    async function fetchORModelPrice(model, apiKey) {
+        if (_orPriceCache) return _orPriceCache;
+        if (_orPriceFetching) return null;
+        _orPriceFetching = true;
+        try {
+            const resp = await fetch(`https://openrouter.ai/api/v1/models`, {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            if (!resp.ok) return null;
+            const json = await resp.json();
+            const found = (json.data || []).find(m => m.id === model);
+            if (found && found.pricing) {
+                // OpenRouter returns cost per token as a string
+                _orPriceCache = {
+                    prompt:     parseFloat(found.pricing.prompt)     || 0,
+                    completion: parseFloat(found.pricing.completion) || 0
+                };
+                return _orPriceCache;
+            }
+        } catch (e) { /* ignore */ }
+        finally { _orPriceFetching = false; }
+        return null;
+    }
+
     // ── Refresh Stats every 1s ──────────────────────────────────────────────
     function refreshData() {
-        chrome.storage.local.get(['inputTokens', 'outputTokens', 'inCost', 'outCost', 'lastAiAnswer', 'sysLogs', 'panicMode'], (data) => {
+        chrome.storage.local.get(['inputTokens','outputTokens','inCost','outCost','lastAiAnswer','sysLogs','panicMode','provider','model','apiKey'], async (data) => {
             const inT  = data.inputTokens  || 0;
             const outT = data.outputTokens || 0;
-            const inC  = data.inCost  !== undefined ? data.inCost  : 0.50;
-            const outC = data.outCost !== undefined ? data.outCost : 3.00;
-            const totalSpent = ((inT / 1_000_000) * inC) + ((outT / 1_000_000) * outC);
+            const isOR = (data.provider || 'openrouter') === 'openrouter';
 
-            document.getElementById('inCount').innerText    = inT.toLocaleString();
-            document.getElementById('outCount').innerText   = outT.toLocaleString();
-            document.getElementById('totalCost').innerText  = totalSpent.toFixed(4);
+            document.getElementById('inCount').innerText  = inT.toLocaleString();
+            document.getElementById('outCount').innerText = outT.toLocaleString();
+
+            const inRateRow  = document.getElementById('inRateRow');
+            const outRateRow = document.getElementById('outRateRow');
+            const badge      = document.getElementById('orPriceBadge');
+            const inDisp     = document.getElementById('inRateDisplay');
+            const outDisp    = document.getElementById('outRateDisplay');
+
+            let inC, outC;
+
+            if (isOR) {
+                inRateRow.style.display  = 'flex';
+                outRateRow.style.display = 'flex';
+
+                // Try live fetch first
+                const live = await fetchORModelPrice(data.model, data.apiKey);
+                if (live) {
+                    inC  = live.prompt     * 1_000_000;
+                    outC = live.completion * 1_000_000;
+                    badge.style.display = 'inline';
+                } else {
+                    // Fall back to manual saved values
+                    inC  = data.inCost  !== undefined ? data.inCost  : 0.50;
+                    outC = data.outCost !== undefined ? data.outCost : 3.00;
+                    badge.style.display = 'none';
+                }
+                inDisp.innerText  = `$${inC.toFixed(3)}`;
+                outDisp.innerText = `$${outC.toFixed(3)}`;
+            } else {
+                // Non-OpenRouter: hide rate rows, use saved manual values
+                inRateRow.style.display  = 'none';
+                outRateRow.style.display = 'none';
+                badge.style.display      = 'none';
+                inC  = data.inCost  !== undefined ? data.inCost  : 0.50;
+                outC = data.outCost !== undefined ? data.outCost : 3.00;
+            }
+
+            const totalSpent = ((inT / 1_000_000) * inC) + ((outT / 1_000_000) * outC);
+            document.getElementById('totalCost').innerText = totalSpent.toFixed(4);
 
             if (data.lastAiAnswer) {
                 document.getElementById('lastInterceptText').innerText = data.lastAiAnswer;
             }
-
             if (logArea) logArea.value = (data.sysLogs || []).join('\n');
-
             updatePanicUI(data.panicMode);
         });
     }
 
     setInterval(refreshData, 1000);
+
+    // ── History View ────────────────────────────────────────────────────────
+    function renderHistory() {
+        const list      = document.getElementById('historyList');
+        const countSpan = document.getElementById('historyCount');
+        list.innerHTML  = '';
+
+        chrome.storage.local.get(['sniperHistory'], (data) => {
+            const items = data.sniperHistory || [];
+            countSpan.innerText = `${items.length} entr${items.length === 1 ? 'y' : 'ies'}`;
+
+            if (items.length === 0) {
+                list.innerHTML = '<div class="history-empty">🎯 No sniper history yet.<br><span style="font-size:11px;color:#333">Select text + Alt+S or drag + Alt+C</span></div>';
+                return;
+            }
+
+            items.forEach((entry, idx) => {
+                const el = document.createElement('div');
+                el.className = 'history-item';
+                el.innerHTML = `
+                    <div class="history-q">${escapeHtml(entry.q)}</div>
+                    <div class="history-a" id="ha-${idx}">${renderHistoryAnswer(entry.a)}</div>
+                    <div class="history-meta">
+                        <span>🕒 ${entry.time || ''}</span>
+                        <span style="color:var(--accent)">▼ expand</span>
+                    </div>`;
+
+                el.addEventListener('click', () => {
+                    const aDiv = document.getElementById(`ha-${idx}`);
+                    aDiv.classList.toggle('expanded');
+                    const meta = el.querySelector('.history-meta span:last-child');
+                    meta.innerText = aDiv.classList.contains('expanded') ? '▲ collapse' : '▼ expand';
+                });
+
+                list.appendChild(el);
+            });
+        });
+    }
+
+    function escapeHtml(str) {
+        return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderHistoryAnswer(text) {
+        if (!text) return '';
+        return escapeHtml(text)
+            .replace(/\*\*(.*?)\*\*/g, '<b style="color:#44ff44">$1</b>')
+            .replace(/\*(.*?)\*/g,     '<i style="color:#aaffaa">$1</i>')
+            .replace(/`(.*?)`/g,       '<code style="color:#ff9966;background:#1a0a00;padding:1px 4px;border-radius:3px">$1</code>')
+            .replace(/\n/g, '<br>');
+    }
+
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (!confirm('Clear all sniper history?')) return;
+        chrome.storage.local.set({ sniperHistory: [] }, renderHistory);
+    });
 
     // ── Load Saved Settings ─────────────────────────────────────────────────
     const settingsKeys = [
@@ -212,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Save Configuration ──────────────────────────────────────────────────
     document.getElementById('save').addEventListener('click', () => {
+        _orPriceCache = null; // invalidate cache so new model price is fetched
         chrome.storage.local.set({
             apiKey:      document.getElementById('apiKey').value.trim(),
             model:       document.getElementById('model').value.trim() || 'google/gemini-2.5-flash',
