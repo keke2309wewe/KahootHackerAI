@@ -2,7 +2,14 @@
 
 A stealthy, AI-powered browser extension designed to secretly solve online quizzes using vision models. It runs entirely in the background, takes screenshots of active quizzes, and highlights the correct answers using nearly invisible CSS modifications to avoid detection.
 
-## 🚀 What's New in v4.7
+## 🚀 What's New in v4.8
+
+* **Classtime Multiple Choice Support:** Now fully supports both radio buttons and checkboxes. Highlights multiple correct options simultaneously.
+* **Classtime Auto-Fill & Clipboard:** For free-text questions, the AI result is now automatically typed into the answer box and copied to your clipboard.
+* **Intelligent DOM Mapping:** Improved logic that distinguishes between choice indices and text answers (e.g., math solutions). Added support for Material UI specific selectors.
+* **Plain Text Enforcement:** All AI outputs (Classtime, Sniper, Crop) are now strictly plain text. No LaTeX, no markdown formatting, no complex characters—guaranteed to be easy to type on any 60% keyboard.
+
+## 🚀 What Was New in v4.7
 
 * **Sniper History Panel:** A new 📋 tab in the popup lets you browse all past Text Sniper and Crop Sniper Q&A results. Click any entry to expand the full answer. Clear all history with one button.
 * **OpenRouter Live Cost Estimator:** The stats panel now automatically fetches live $/1M pricing for your exact model directly from the OpenRouter API and displays a real-time cost breakdown. Falls back to manual values for OpenAI / Custom providers.
@@ -71,7 +78,7 @@ Before the extension can solve anything, you need to provide it with an AI brain
 ## 🎮 How to Use
 
 * **Auto-Solve (Kahoot, Naurok):** Simply play the game normally. When the question appears and the answer boxes load, the extension will automatically analyze the screen and apply your chosen Stealth Style to the correct box.
-* **Manual Capture (Classtime):** For Classtime, wait for the question to load and press `Shift+A`. The extension will then capture the screen and highlight the correct answer using your chosen Stealth Style.
+* **Manual Capture (Classtime):** For Classtime, press `Shift+A`. The extension will analyze the screen and either highlight the correct option(s) or automatically fill the text answer box and copy it to your clipboard.
 * **Text Sniper:** Highlight any text on any webpage, right-click and select **"Snipe Text with AI"**, or press `Alt+S`. The extension will process the text and return a formatted answer.
 * **Crop Sniper:** Press `Alt+C` to activate the crosshair, drag to select an area, and the AI will analyze the cropped image.
 * **Direct Chat:** Open the popup and click **Comms**. Ask any question or paste a screenshot for immediate help.
