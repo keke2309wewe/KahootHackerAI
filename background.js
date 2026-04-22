@@ -72,9 +72,9 @@ function accumulateTokens(usage) {
 const DEFAULTS = {
     promptKahoot:   "You are a Kahoot player. Look at this screenshot of a Kahoot game. Read the question and the four answers provided in the colored boxes (Red Triangle, Blue Diamond, Yellow Circle, Green Square). Determine the correct answer. Output ONLY the color of the correct answer box. Your response must be exactly one word: RED, BLUE, YELLOW, or GREEN.",
     promptNaurok:   "Look at this screenshot of a Naurok quiz. Read the question and the four answer options displayed in colored boxes from left to right: Pink/Red, Yellow/Orange, Light Blue, Light Green. Determine the correct answer. Output ONLY the color of the correct answer box. Your response must be exactly one word: RED, YELLOW, BLUE, or GREEN.",
-    promptClasstime:"Look at this screenshot of a quiz. Read the question and the available text options. Determine the correct answer. Output ONLY the number of the correct option, counting from the top down (1 for the first option, 2 for the second, etc.). Your response must be exactly one digit (e.g., 1, 2, 3, or 4).",
-    promptSniper:   "You are a helper for an 8th-grade student in Ukraine (НУШ). Reply ONLY in Ukrainian. If it is a general question, give the shortest possible correct answer. If it is a math, algebra, or physics problem, provide the clear step-by-step solution so it can be copied into a notebook. Use '-' instead of long dashes. Do not use markdown formatting like bolding or headers, just plain text.",
-    promptCrop:     "Look at this cropped image from a test or assignment. It may contain a math problem, a graph, or text. Solve the problem or answer the question shown. Give ONLY the final answer or the essential steps if it's math. Keep it extremely concise. Reply in Ukrainian.",
+    promptClasstime:"Look at this screenshot of a quiz on Classtime. 1. If it's a multiple-choice question (radio buttons or checkboxes), identify the correct option(s). Output ONLY the index number(s) of the correct option(s), counting from top down (1 for first, 2 for second, etc.). If multiple answers are correct, list them separated by commas (e.g., '1,3'). 2. If it's a text-based question, provide the correct text answer in plain text. NO LaTeX, no markdown, no formatting. Use simple characters typeable on a 60% keyboard.",
+    promptSniper:   "You are a helper for an 8th-grade student in Ukraine (НУШ). Reply ONLY in Ukrainian. Give the shortest possible correct answer. If it's math/physics, provide clear steps but use ONLY plain text. NO LaTeX, no bolding, no markdown. Use simple characters (e.g., ^ for powers, / for fractions). Ensure it can be typed on a basic 60% keyboard.",
+    promptCrop:     "Look at this cropped image from a test. Solve the problem or answer the question. Give ONLY the final answer or essential steps. Reply in Ukrainian. Use plain text ONLY. NO LaTeX, no formatting, no markdown. Must be typeable on a 60% keyboard.",
 };
 
 async function getPrompt(key) {
@@ -230,17 +230,27 @@ async function analyzeImage(base64Image, platform) {
     if (!json.choices?.[0]) throw new Error(json.error?.message || 'API Limit or Unknown Error');
 
     accumulateTokens(json.usage);
-    let result = json.choices[0].message.content.trim().toUpperCase();
+    let result = json.choices[0].message.content.trim();
     chrome.storage.local.set({ lastAiAnswer: result });
 
     if (platform === 'classtime') {
-        const match = result.match(/\d+/);
-        return match ? match[0] : result;
+        // If result is just digits and commas, it's multiple choice
+        if (/^[\d,\s]+$/.test(result)) {
+            return result;
+        }
+        // If it's a single digit (possibly with extra text), try to extract it
+        const digitMatch = result.match(/^\s*(\d+)\s*$/);
+        if (digitMatch) return digitMatch[1];
+        
+        // Otherwise return the whole text (for free text)
+        return result;
     }
-    if (result.includes('RED'))    return 'RED';
-    if (result.includes('BLUE'))   return 'BLUE';
-    if (result.includes('YELLOW')) return 'YELLOW';
-    if (result.includes('GREEN'))  return 'GREEN';
+
+    const upperResult = result.toUpperCase();
+    if (upperResult.includes('RED'))    return 'RED';
+    if (upperResult.includes('BLUE'))   return 'BLUE';
+    if (upperResult.includes('YELLOW')) return 'YELLOW';
+    if (upperResult.includes('GREEN'))  return 'GREEN';
     return result;
 }
 

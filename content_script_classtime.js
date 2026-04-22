@@ -44,38 +44,91 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-function applyClasstimeFormatting(indexStr) {
-    let targetIndex = parseInt(indexStr) - 1;
+function applyClasstimeFormatting(result) {
+    if (!result) return;
 
-    if (isNaN(targetIndex) || targetIndex < 0) {
-        sysLog("Failed to map index: " + indexStr);
-        return;
-    }
-
-    let radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
-
-    let visibleRadios = radioInputs.filter(el => {
+    // 1. Identify valid inputs for multiple choice / single choice
+    const inputSelectors = [
+        'input[type="radio"]', 
+        'input[type="checkbox"]',
+        'input.PrivateSwitchBase-input',
+        '.MuiRadio-root input',
+        '.MuiCheckbox-root input'
+    ];
+    
+    let allInputs = Array.from(document.querySelectorAll(inputSelectors.join(', ')));
+    
+    // Filter for visible/relevant inputs
+    let visibleInputs = allInputs.filter(el => {
         const rect = el.getBoundingClientRect();
         return (
             rect.top >= 0 &&
             rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.left > (window.innerWidth * 0.2)
+            rect.left > (window.innerWidth * 0.1)
         );
     });
 
-    visibleRadios.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+    // Remove duplicates and sort
+    visibleInputs = [...new Set(visibleInputs)];
+    visibleInputs.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 
-    sysLog(`Debug: Found ${visibleRadios.length} valid radio inputs in viewport.`);
+    // 2. Decide if the result is indices or text answer
+    let isLikelyIndices = false;
+    let targetIndices = [];
 
-    if (visibleRadios.length > targetIndex) {
-        let targetRadio = visibleRadios[targetIndex];
-        let targetContainer = targetRadio.closest('label') || targetRadio.parentElement;
-
-        applyStealthStyles(targetContainer);
-
-        let tagInfo = `${targetContainer.tagName.toLowerCase()}.${targetContainer.className.replace(/\s+/g, '.')}`;
-        sysLog(`Formatted option ${targetIndex + 1}. Target applied to: ${tagInfo}`);
-    } else {
-        sysLog(`DOM fail: Could not find index ${targetIndex}. Only saw ${visibleRadios.length} valid radios in view.`);
+    if (visibleInputs.length > 0 && /^[\d,\s]+$/.test(result)) {
+        targetIndices = result.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        // Only treat as indices if ALL of them are within range of visible inputs
+        if (targetIndices.length > 0 && targetIndices.every(n => n >= 1 && n <= visibleInputs.length)) {
+            isLikelyIndices = true;
+        }
     }
-}
+
+    if (isLikelyIndices) {
+        sysLog(`Highlighting options: ${targetIndices.join(', ')}`);
+        targetIndices.forEach(idx => {
+            const targetInput = visibleInputs[idx - 1];
+            const targetContainer = targetInput.closest('label') || targetInput.parentElement;
+            applyStealthStyles(targetContainer);
+        });
+    } else {
+        // 3. Handle as text answer
+        sysLog("Handling as text answer.");
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(result).then(() => {
+            sysLog("Copied to clipboard: " + result);
+        }).catch(() => {
+            const textArea = document.createElement("textarea");
+            textArea.value = result;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            sysLog("Copied to clipboard (fallback).");
+        });
+        
+        // Try to find the text input and fill it
+        const textSelectors = [
+            'textarea[placeholder*="answer"]',
+            'textarea[placeholder*="відповідь"]',
+            'textarea.MuiInputBase-input',
+            'input[type="text"].MuiInputBase-input',
+            '[contenteditable="true"]'
+        ];
+        
+        const textInput = document.querySelector(textSelectors.join(', '));
+        if (textInput) {
+            if (textInput.tagName === 'TEXTAREA' || textInput.tagName === 'INPUT') {
+                textInput.value = result;
+                textInput.dispatchEvent(new Event('input', { bubbles: true }));
+                textInput.dispatchEvent(new Event('change', { bubbles: true }));
+                sysLog("Filled text input automatically.");
+            } else if (textInput.isContentEditable) {
+                textInput.innerText = result;
+                textInput.dispatchEvent(new Event('input', { bubbles: true }));
+                sysLog("Filled contenteditable input.");
+            }
+        }
+    }
+}
