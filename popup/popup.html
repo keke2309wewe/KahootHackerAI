@@ -106,6 +106,32 @@
         .cost-divider { border: none; border-top: 1px solid var(--border); margin: 5px 0; }
         .cost-total { color: #fff; font-weight: bold; }
         #orPriceBadge { font-size: 10px; color: #ffcc00; background: rgba(255,200,0,0.1); border: 1px solid rgba(255,200,0,0.3); border-radius: 3px; padding: 1px 5px; display: none; }
+        /* Quiz Answer Table (Answers View) */
+        #answersView { display: none; }
+        .quiz-fetch-bar { display: flex; gap: 6px; margin-bottom: 10px; }
+        .quiz-fetch-bar input { flex: 1; margin: 0; }
+        .quiz-fetch-bar button { flex-shrink: 0; padding: 7px 12px; background: var(--accent); color: #000; border: none; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .quiz-fetch-bar button:hover { opacity: 0.8; }
+        #quizStatus { font-size: 11px; color: #666; margin-bottom: 8px; min-height: 16px; }
+        #quizStatus.ok  { color: var(--accent); }
+        #quizStatus.err { color: #ff5555; }
+        #quizTitle { font-size: 13px; font-weight: bold; color: var(--text); margin-bottom: 8px; }
+        #answerTable { width: 100%; border-collapse: collapse; font-size: 11px; }
+        #answerTable th { text-align: left; color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+        #answerTable td { padding: 5px 6px; border-bottom: 1px solid #1a1a1a; vertical-align: top; }
+        #answerTable tr:hover td { background: rgba(255,255,255,0.03); }
+        .ans-q { color: #ccc; line-height: 1.35; }
+        .ans-a { color: var(--accent); font-weight: bold; }
+        .ans-pill { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; vertical-align: middle; }
+        .ans-pill.RED    { background: #e21b3c; }
+        .ans-pill.BLUE   { background: #1368ce; }
+        .ans-pill.YELLOW { background: #d89e00; }
+        .ans-pill.GREEN  { background: #26890c; }
+        .ans-pill.NONE   { background: #555; }
+        .ans-rand { color: #ff9900; font-size: 10px; }
+        #answerListWrap { max-height: 420px; overflow-y: auto; }
+        .clear-cache-btn { width: 100%; margin-top: 8px; padding: 7px; background: transparent; color: #ff5555; border: 1px solid #ff5555; font-weight: bold; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        .clear-cache-btn:hover { background: rgba(255,85,85,0.1); }
     </style>
 </head>
 <body>
@@ -113,6 +139,7 @@
         <h3>AI Stealth</h3>
         <button id="navSettingsBtn" class="icon-btn active" title="Settings">⚙️</button>
         <button id="navHistoryBtn" class="icon-btn" title="Sniper History">📋</button>
+        <button id="navAnswersBtn" class="icon-btn" title="Quiz Answers">🎯</button>
         <button id="navPromptsBtn" class="icon-btn" title="Edit Prompts">✏️</button>
         <button id="toggleChatBtn" class="icon-btn" title="Comms">💬</button>
     </div>
@@ -225,6 +252,18 @@
             </div>
         </div>
 
+        <div class="section-title">🎯 Solve Mode</div>
+
+        <div class="form-group">
+            <label>How to determine the correct answer</label>
+            <select id="solveMode">
+                <option value="hybrid">Hybrid — Cache first, AI fallback</option>
+                <option value="ai">AI Only — Always use screenshot analysis</option>
+                <option value="cache">Cache Only — Pre-loaded answers, no AI</option>
+            </select>
+            <p style="font-size:10px;color:#555;margin:4px 0 0;">Hybrid is recommended. Cache Only requires a Quiz UUID to be loaded in the 🎯 tab.</p>
+        </div>
+
 
 
         <div class="section-title">🧠 Reasoning</div>
@@ -264,6 +303,35 @@
             <button id="clearHistoryBtn" class="chat-btn danger">🗑️ Clear All</button>
         </div>
         <div id="historyList"></div>
+    </div>
+
+    <!-- ANSWERS VIEW -->
+    <div id="answersView" class="view-container">
+        <div class="section-title">🎯 Kahoot Quiz Answer Pre-loader</div>
+        <p style="font-size:11px;color:#666;margin:0 0 10px;">Paste a Kahoot Quiz UUID to pre-fetch all answers. Instant highlight — no AI tokens used. Falls back to screenshot AI for private/randomised quizzes.</p>
+
+        <div class="quiz-fetch-bar">
+            <input type="text" id="quizIdInput" placeholder="Quiz UUID (from URL or share link)" autocomplete="off">
+            <button id="fetchQuizBtn">Fetch</button>
+        </div>
+        <div id="quizStatus"></div>
+        <div id="quizTitle"></div>
+
+        <div id="answerListWrap">
+            <table id="answerTable" style="display:none">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Question</th>
+                        <th>Answer</th>
+                        <th>Color</th>
+                    </tr>
+                </thead>
+                <tbody id="answerTableBody"></tbody>
+            </table>
+        </div>
+
+        <button class="clear-cache-btn" id="clearCacheBtn" style="display:none">🗑️ Clear Cache &amp; Reset</button>
     </div>
 
     <!-- PROMPTS VIEW -->

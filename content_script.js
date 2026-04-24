@@ -5,6 +5,7 @@ const sysLog = createSysLog('Kahoot');
 
 let isAnalyzing = false;
 let hasAnsweredCurrentQuestion = false;
+let questionIndexHint = 0;   // tracks which question we're on for cache lookup
 let lastLogState = "";
 let scanInterval;
 
@@ -54,6 +55,7 @@ function scanForGameBoard() {
             if (!isGameBlock && answerBlocks.length < 2 && hasAnsweredCurrentQuestion) {
                 sysLog("Board cleared. Resetting question lock.");
                 hasAnsweredCurrentQuestion = false;
+                questionIndexHint++;   // advance expected question index
                 scrubAllEvidence();
             }
 
@@ -70,30 +72,66 @@ function scanForGameBoard() {
                     return;
                 }
 
-                sysLog("🎯 Live board detected! Forcing screenshot...");
-                isAnalyzing = true;
+                // ── Mode-aware solving ────────────────────────────────────────
+                chrome.storage.local.get(['quizAnswerCache', 'solveMode'], (cacheData) => {
+                    if (chrome.runtime.lastError) return;
+                    const cache = cacheData.quizAnswerCache;
+                    const mode  = cacheData.solveMode || 'hybrid'; // 'ai' | 'cache' | 'hybrid'
 
-                chrome.runtime.sendMessage({ type: "REQUEST_SCREENSHOT_ANALYSIS", platform: "kahoot" }, (response) => {
-                    isAnalyzing = false;
-                    if (chrome.runtime.lastError) {
-                        sysLog("Connection error: " + chrome.runtime.lastError.message);
+                    const hasCacheHit = Array.isArray(cache)
+                        && questionIndexHint < cache.length
+                        && cache[questionIndexHint] !== null;
+
+                    // --- AI-only mode: skip cache entirely ---
+                    if (mode === 'ai') {
+                        runScreenshotAI();
                         return;
                     }
 
-                    chrome.storage.local.get(['panicMode'], (lateData) => {
-                        if (!lateData.panicMode && response && response.winningColor) {
-                            highlightByColor(response.winningColor);
-                            hasAnsweredCurrentQuestion = true;
-                        } else if (response && response.error) {
-                            sysLog("AI Error: " + response.error);
-                        }
-                    });
+                    // --- Cache hit (Cache-only or Hybrid) ---
+                    if (hasCacheHit) {
+                        const cachedColor = cache[questionIndexHint];
+                        sysLog(`⚡ Cache hit Q${questionIndexHint + 1}: ${cachedColor} (no AI needed)`);
+                        chrome.storage.local.set({ lastAiAnswer: `[CACHE] ${cachedColor}` });
+                        highlightByColor(cachedColor);
+                        hasAnsweredCurrentQuestion = true;
+                        return;
+                    }
+
+                    // --- Cache miss ---
+                    if (mode === 'cache') {
+                        sysLog(`Cache miss Q${questionIndexHint + 1} — Cache-only mode, skipping AI.`);
+                        return; // don't fire AI in cache-only mode
+                    }
+
+                    // --- Hybrid: cache missed, fall back to AI ---
+                    runScreenshotAI();
                 });
             }
         });
     } catch (error) {
         if (scanInterval) clearInterval(scanInterval);
     }
+}
+
+function runScreenshotAI() {
+    sysLog("🎯 Live board detected! Sending to AI...");
+    isAnalyzing = true;
+    chrome.runtime.sendMessage({ type: "REQUEST_SCREENSHOT_ANALYSIS", platform: "kahoot" }, (response) => {
+        isAnalyzing = false;
+        if (chrome.runtime.lastError) {
+            sysLog("Connection error: " + chrome.runtime.lastError.message);
+            return;
+        }
+        chrome.storage.local.get(['panicMode'], (lateData) => {
+            if (!lateData.panicMode && response && response.winningColor) {
+                highlightByColor(response.winningColor);
+                hasAnsweredCurrentQuestion = true;
+            } else if (response && response.error) {
+                sysLog("AI Error: " + response.error);
+            }
+        });
+    });
 }
 
 function highlightByColor(colorStr) {

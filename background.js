@@ -8,7 +8,7 @@ function writeLog(msg) {
     });
 }
 
-writeLog("V4.3 ENGINE START.");
+writeLog("V4.9 ENGINE START.");
 
 // ── Shared API Helpers ────────────────────────────────────────────────────────
 function buildEndpoint(provider, customUrl) {
@@ -167,6 +167,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return false;
     }
 
+    // ── Quiz Answer Pre-loader (Kitty-Tools / kahoot-answer-bot approach) ────────
+    if (request.type === 'FETCH_QUIZ_ANSWERS') {
+        const quizId = (request.quizId || '').trim();
+        if (!quizId) {
+            sendResponse({ error: 'No Quiz ID provided.' });
+            return false;
+        }
+        writeLog(`Fetching quiz answers for ID: ${quizId}`);
+        fetchQuizAnswers(quizId)
+            .then(result => {
+                writeLog(`Quiz loaded: "${result.title}" — ${result.cache.length} questions`);
+                // Persist cache for content_script to use
+                chrome.storage.local.set({ quizAnswerCache: result.cache, quizTitle: result.title });
+                sendResponse({ ok: true, title: result.title, questions: result.questions });
+            })
+            .catch(err => {
+                writeLog(`Quiz fetch error: ${err.message}`);
+                sendResponse({ error: err.message });
+            });
+        return true; // async
+    }
+
+    if (request.type === 'CLEAR_QUIZ_CACHE') {
+        chrome.storage.local.remove(['quizAnswerCache', 'quizTitle']);
+        writeLog('Quiz answer cache cleared.');
+        return false;
+    }
+
 });
 
 // ── Broadcast Helper ──────────────────────────────────────────────────────────
@@ -174,6 +202,73 @@ function broadcastToActiveTab(msg) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, msg);
     });
+}
+
+// ── Kahoot Public API — Quiz Answer Fetcher ────────────────────────────────────
+// Uses the same endpoint as Kitty-Tools & kahoot-answer-bot:
+//   GET https://create.kahoot.it/rest/kahoots/{quizUUID}
+// Index → color:  0=RED  1=BLUE  2=YELLOW  3=GREEN  (matches in-game button order)
+const COLOR_MAP = ['RED', 'BLUE', 'YELLOW', 'GREEN'];
+
+async function fetchQuizAnswers(quizId) {
+    const url = `https://create.kahoot.it/rest/kahoots/${encodeURIComponent(quizId)}`;
+    const resp = await fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0'
+        }
+    });
+
+    if (resp.status === 400) throw new Error('Invalid Quiz UUID — check the ID and try again.');
+    if (resp.status === 403) throw new Error('Quiz is private or requires login.');
+    if (resp.status === 404) throw new Error('Quiz not found.');
+    if (!resp.ok)            throw new Error(`Kahoot API returned HTTP ${resp.status}`);
+
+    const quiz = await resp.json();
+    if (!quiz.questions || !Array.isArray(quiz.questions)) {
+        throw new Error('Unexpected API response — no questions array.');
+    }
+
+    // Detect randomised answer order (cache is unreliable in this case)
+    const randomized = quiz.options?.questionAndAnswerCountdown === false
+                    || quiz.randomizeAnswers === true;
+
+    const cache = [];
+    const questions = [];
+
+    quiz.questions.forEach((q, idx) => {
+        const type = q.type || q.questionLayout;
+        // Types that have indexable choices: quiz, multiple_select_quiz
+        const hasChoices = q.choices && Array.isArray(q.choices) && q.choices.length > 0;
+
+        if (!hasChoices) {
+            cache.push(null); // non-standard question type
+            questions.push({ index: idx, question: q.question, answer: '(no choices)', color: null, type });
+            return;
+        }
+
+        let correctIndex = -1;
+        let correctAnswer = '';
+        q.choices.forEach((c, i) => {
+            if (c.correct && correctIndex === -1) {
+                correctIndex = i;
+                correctAnswer = c.answer || '';
+            }
+        });
+
+        const color = correctIndex >= 0 ? (COLOR_MAP[correctIndex] || null) : null;
+        cache.push(randomized ? null : color); // null = force AI fallback for randomised
+        questions.push({
+            index: idx,
+            question: q.question || `Question ${idx + 1}`,
+            answer: correctAnswer,
+            color,
+            randomized,
+            type
+        });
+    });
+
+    return { title: quiz.title || 'Unknown Quiz', cache, questions };
 }
 
 // ── Retry Wrapper ─────────────────────────────────────────────────────────────

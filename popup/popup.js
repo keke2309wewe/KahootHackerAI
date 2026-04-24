@@ -19,12 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const views = {
         settings: document.getElementById('settingsView'),
         history:  document.getElementById('historyView'),
+        answers:  document.getElementById('answersView'),
         prompts:  document.getElementById('promptsView'),
         chat:     document.getElementById('chatView'),
     };
     const navBtns = {
         settings: document.getElementById('navSettingsBtn'),
         history:  document.getElementById('navHistoryBtn'),
+        answers:  document.getElementById('navAnswersBtn'),
         prompts:  document.getElementById('navPromptsBtn'),
         chat:     document.getElementById('toggleChatBtn'),
     };
@@ -47,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navBtns.settings.addEventListener('click', () => showView('settings'));
     navBtns.history.addEventListener('click',  () => showView('history'));
+    navBtns.answers.addEventListener('click',  () => showView('answers'));
     navBtns.prompts.addEventListener('click',  () => showView('prompts'));
     navBtns.chat.addEventListener('click',     () => showView('chat'));
     document.getElementById('backToSettings').addEventListener('click', () => showView('settings'));
@@ -227,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'apiKey','model','provider','customUrl','themeColor','rainbowMode',
         'panicMode','styleBold','styleItalic','styleColor','styleFont','styleGhost',
         'cursorStyle','chatSessions','activeChatId','useNushPrompt',
-        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort'
+        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort','solveMode'
     ];
     chrome.storage.local.get(settingsKeys, (data) => {
         if (data.apiKey)    document.getElementById('apiKey').value  = data.apiKey;
@@ -257,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('outCost').value = data.outCost !== undefined ? data.outCost : 3.00;
 
         document.getElementById('visibilityBypass').checked = data.visibilityBypass === true;
+        if (data.solveMode) document.getElementById('solveMode').value = data.solveMode;
 
         document.getElementById('useReasoning').checked = data.useReasoning === true;
         if (data.reasoningEffort) document.getElementById('reasoningEffort').value = data.reasoningEffort;
@@ -352,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             styleGhost:  document.getElementById('styleGhost').checked,
             cursorStyle: document.getElementById('cursorStyle').value,
             visibilityBypass: document.getElementById('visibilityBypass').checked,
+            solveMode:        document.getElementById('solveMode').value,
             useReasoning:     document.getElementById('useReasoning').checked,
             reasoningEffort:  document.getElementById('reasoningEffort').value,
         }, () => {
@@ -674,4 +679,103 @@ document.addEventListener('DOMContentLoaded', () => {
         if (provider === 'openrouter') h['HTTP-Referer'] = 'https://kahoot-win.v';
         return h;
     }
+
+    // ── Quiz Answer Pre-loader (Answers View) ───────────────────────────────
+    const quizIdInput    = document.getElementById('quizIdInput');
+    const fetchQuizBtn   = document.getElementById('fetchQuizBtn');
+    const quizStatus     = document.getElementById('quizStatus');
+    const quizTitleEl    = document.getElementById('quizTitle');
+    const answerTable    = document.getElementById('answerTable');
+    const answerTableBody= document.getElementById('answerTableBody');
+    const clearCacheBtn  = document.getElementById('clearCacheBtn');
+
+    const COLOR_LABELS = { RED: '🔴', BLUE: '🔵', YELLOW: '🟡', GREEN: '🟢' };
+
+    function renderAnswerTable(title, questions) {
+        quizTitleEl.innerText = `📋 ${title}`;
+        answerTableBody.innerHTML = '';
+        questions.forEach((q, i) => {
+            const tr = document.createElement('tr');
+            const pill = q.color
+                ? `<span class="ans-pill ${q.color}"></span>${COLOR_LABELS[q.color] || ''}`
+                : `<span class="ans-pill NONE"></span>—`;
+            const randNote = q.randomized ? `<br><span class="ans-rand">⚠ Answers randomised — AI will be used</span>` : '';
+            tr.innerHTML = `
+                <td style="color:#555;font-size:10px;">${i + 1}</td>
+                <td class="ans-q">${escapeHtml(q.question || '')}${randNote}</td>
+                <td class="ans-a">${escapeHtml(q.answer || '—')}</td>
+                <td style="white-space:nowrap;">${pill}</td>`;
+            answerTableBody.appendChild(tr);
+        });
+        answerTable.style.display = 'table';
+        clearCacheBtn.style.display = 'block';
+    }
+
+    function setQuizStatus(msg, type) {
+        quizStatus.innerText = msg;
+        quizStatus.className = type || '';
+    }
+
+    fetchQuizBtn.addEventListener('click', () => {
+        const id = (quizIdInput.value || '').trim();
+        if (!id) { setQuizStatus('Enter a Quiz UUID first.', 'err'); return; }
+        fetchQuizBtn.disabled = true;
+        fetchQuizBtn.innerText = '…';
+        setQuizStatus('Fetching from Kahoot API…', '');
+        quizTitleEl.innerText = '';
+        answerTable.style.display = 'none';
+        clearCacheBtn.style.display = 'none';
+
+        chrome.runtime.sendMessage({ type: 'FETCH_QUIZ_ANSWERS', quizId: id }, (resp) => {
+            fetchQuizBtn.disabled = false;
+            fetchQuizBtn.innerText = 'Fetch';
+            if (chrome.runtime.lastError || !resp) {
+                setQuizStatus('Extension error — try reloading.', 'err');
+                return;
+            }
+            if (resp.error) {
+                setQuizStatus('✗ ' + resp.error, 'err');
+                return;
+            }
+            setQuizStatus(`✓ Loaded ${resp.questions.length} questions. Active in game!`, 'ok');
+            renderAnswerTable(resp.title, resp.questions);
+        });
+    });
+
+    quizIdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') fetchQuizBtn.click();
+    });
+
+    clearCacheBtn.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'CLEAR_QUIZ_CACHE' });
+        setQuizStatus('Cache cleared.', '');
+        quizTitleEl.innerText = '';
+        answerTable.style.display = 'none';
+        clearCacheBtn.style.display = 'none';
+        answerTableBody.innerHTML = '';
+        quizIdInput.value = '';
+    });
+
+    // Auto-load cached quiz data when Answers view is opened
+    function loadCachedAnswers() {
+        chrome.storage.local.get(['quizAnswerCache', 'quizTitle'], (data) => {
+            if (!data.quizAnswerCache || !Array.isArray(data.quizAnswerCache)) return;
+            // Reconstruct display-only rows from cache (color only, no answer text on cache-only restore)
+            const rows = data.quizAnswerCache.map((color, i) => ({
+                index: i,
+                question: `Question ${i + 1}`,
+                answer: color || '(randomised)',
+                color: color || null,
+                randomized: !color
+            }));
+            setQuizStatus(`✓ Cache active: ${rows.length} questions`, 'ok');
+            renderAnswerTable(data.quizTitle || 'Cached Quiz', rows);
+        });
+    }
+
+    // Hook into showView to auto-load on tab switch
+    const _origShowView = showView;
+    // Patch: we re-call loadCachedAnswers when answers tab opens
+    navBtns.answers.addEventListener('click', loadCachedAnswers);
+
 });
