@@ -132,6 +132,20 @@
         #answerListWrap { max-height: 420px; overflow-y: auto; }
         .clear-cache-btn { width: 100%; margin-top: 8px; padding: 7px; background: transparent; color: #ff5555; border: 1px solid #ff5555; font-weight: bold; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; }
         .clear-cache-btn:hover { background: rgba(255,85,85,0.1); }
+
+        /* Cache Status Bar */
+        .cache-status-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); margin-bottom: 10px; font-size: 11px; transition: border-color 0.3s, background 0.3s; }
+        .cache-status-bar.active  { border-color: var(--accent); background: rgba(0,255,0,0.05); }
+        .cache-status-bar.empty   { border-color: var(--border); }
+        .cache-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; transition: background 0.3s; }
+        .cache-dot.active { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+        .cache-dot.empty  { background: #444; }
+        .cache-label { flex: 1; color: #aaa; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .cache-label b { color: var(--text); }
+        .cache-mode-badge { font-size: 10px; color: #555; background: #111; border: 1px solid #333; border-radius: 3px; padding: 1px 6px; white-space: nowrap; flex-shrink: 0; }
+        .cache-mode-badge.mode-ai     { color: #5599ff; border-color: #5599ff33; background: #001133; }
+        .cache-mode-badge.mode-cache  { color: var(--accent); border-color: rgba(0,255,0,0.2); background: rgba(0,255,0,0.05); }
+        .cache-mode-badge.mode-hybrid { color: #ffaa00; border-color: #ffaa0033; background: #110800; }
     </style>
 </head>
 <body>
@@ -149,6 +163,13 @@
         <div class="intercept-box">
             LAST INTERCEPT
             <span id="lastInterceptText">AWAITING TARGET</span>
+        </div>
+
+        <!-- Cache Status Bar -->
+        <div class="cache-status-bar empty" id="cacheStatusBar">
+            <div class="cache-dot empty" id="cacheDot"></div>
+            <span class="cache-label" id="cacheLabel">No quiz cache loaded</span>
+            <span class="cache-mode-badge" id="cacheModeBadge">—</span>
         </div>
 
         <button id="panicBtn">Panic: OFF (ACTIVE)</button>

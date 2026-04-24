@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Refresh Stats every 1s ──────────────────────────────────────────────
     function refreshData() {
-        chrome.storage.local.get(['inputTokens','outputTokens','inCost','outCost','lastAiAnswer','sysLogs','panicMode','provider','model','apiKey'], async (data) => {
+        chrome.storage.local.get(['inputTokens','outputTokens','inCost','outCost','lastAiAnswer','sysLogs','panicMode','provider','model','apiKey','quizAnswerCache','quizTitle','solveMode'], async (data) => {
             const inT  = data.inputTokens  || 0;
             const outT = data.outputTokens || 0;
             const isOR = (data.provider || 'openrouter') === 'openrouter';
@@ -164,7 +164,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (logArea) logArea.value = (data.sysLogs || []).join('\n');
             updatePanicUI(data.panicMode);
+
+            // ── Cache Status Bar ─────────────────────────────────────────────
+            const bar      = document.getElementById('cacheStatusBar');
+            const dot      = document.getElementById('cacheDot');
+            const lbl      = document.getElementById('cacheLabel');
+            const modeBadge= document.getElementById('cacheModeBadge');
+
+            const cache      = data.quizAnswerCache;
+            const hasCache   = Array.isArray(cache) && cache.length > 0;
+            const solveMode  = data.solveMode || 'hybrid';
+
+            if (hasCache) {
+                const total   = cache.length;
+                const cached  = cache.filter(c => c !== null).length;
+                const title   = data.quizTitle || 'Quiz';
+                bar.className  = 'cache-status-bar active';
+                dot.className  = 'cache-dot active';
+                lbl.innerHTML  = `<b>${escapeHtmlSimple(title)}</b> &nbsp;·&nbsp; ${cached}/${total} answers cached`;
+            } else {
+                bar.className  = 'cache-status-bar empty';
+                dot.className  = 'cache-dot empty';
+                lbl.innerHTML  = 'No quiz cache loaded &nbsp;<span style="color:#555;font-size:10px;">→ open 🎯 tab</span>';
+            }
+
+            // Mode badge
+            const modeLabels = { ai: '🤖 AI Only', cache: '📦 Cache Only', hybrid: '⚡ Hybrid' };
+            modeBadge.innerText  = modeLabels[solveMode] || solveMode;
+            modeBadge.className  = `cache-mode-badge mode-${solveMode}`;
         });
+    }
+
+    function escapeHtmlSimple(str) {
+        return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     setInterval(refreshData, 1000);
