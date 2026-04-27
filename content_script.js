@@ -82,7 +82,7 @@ function scanForGameBoard() {
 
                     chrome.storage.local.get(['panicMode'], (lateData) => {
                         if (!lateData.panicMode && response && response.winningColor) {
-                            highlightByColor(response.winningColor);
+                            highlightByColor(response.winningColor, response.steps);
                             hasAnsweredCurrentQuestion = true;
                         } else if (response && response.error) {
                             sysLog("AI Error: " + response.error);
@@ -96,7 +96,7 @@ function scanForGameBoard() {
     }
 }
 
-function highlightByColor(colorStr) {
+function highlightByColor(colorStr, steps) {
     let targetIndex = -1;
     if (colorStr === "RED") targetIndex = 0;
     if (colorStr === "BLUE") targetIndex = 1;
@@ -119,7 +119,7 @@ function highlightByColor(colorStr) {
     }
 
     if (targetEl) {
-        applyStealthStyles(targetEl);
+        applyStealthStyles(targetEl, steps);
         sysLog(`Formatted ${colorStr} block.`);
     } else {
         sysLog(`FATAL: Could not find ${colorStr} element in DOM.`);

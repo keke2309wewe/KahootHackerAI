@@ -97,10 +97,23 @@ function initAreaSniper() {
         selectorBox.style.top    = Math.min(e.clientY, startY) + 'px';
     });
 
+    // Escape cancels crop
+    function cancelCrop(e) {
+        if (e.code === 'Escape' && document.getElementById('sniper-overlay')) {
+            overlayBox.remove();
+            isCropping = false;
+            showSniperToast('Crop cancelled.', 'error');
+            document.removeEventListener('keydown', cancelCrop);
+        }
+    }
+    document.addEventListener('keydown', cancelCrop);
+
     overlayBox.addEventListener('mouseup', (e) => {
         isCropping = false;
         const rect = selectorBox.getBoundingClientRect();
         overlayBox.remove();
+        // Clean up escape listener on normal completion
+        document.removeEventListener('keydown', cancelCrop);
 
         if (rect.width > 15 && rect.height > 15) {
             showSniperToast('Crop secured. Processing image...', 'loading');
@@ -116,16 +129,6 @@ function initAreaSniper() {
             });
         } else {
             showSniperToast('Crop too small, aborted.', 'error');
-        }
-    });
-
-    // Escape cancels crop
-    document.addEventListener('keydown', function cancelCrop(e) {
-        if (e.code === 'Escape' && document.getElementById('sniper-overlay')) {
-            overlayBox.remove();
-            isCropping = false;
-            showSniperToast('Crop cancelled.', 'error');
-            document.removeEventListener('keydown', cancelCrop);
         }
     });
 }

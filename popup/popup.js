@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'apiKey','model','provider','customUrl','themeColor','rainbowMode',
         'panicMode','styleBold','styleItalic','styleColor','styleFont','styleGhost',
         'cursorStyle','chatSessions','activeChatId','useNushPrompt',
-        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort'
+        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort','stepsMode'
     ];
     chrome.storage.local.get(settingsKeys, (data) => {
         if (data.apiKey)    document.getElementById('apiKey').value  = data.apiKey;
@@ -260,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('useReasoning').checked = data.useReasoning === true;
         if (data.reasoningEffort) document.getElementById('reasoningEffort').value = data.reasoningEffort;
+        if (data.stepsMode) document.getElementById('stepsMode').value = data.stepsMode;
 
         useNushPrompt.checked = data.useNushPrompt !== false;
 
@@ -354,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             visibilityBypass: document.getElementById('visibilityBypass').checked,
             useReasoning:     document.getElementById('useReasoning').checked,
             reasoningEffort:  document.getElementById('reasoningEffort').value,
+            stepsMode:        document.getElementById('stepsMode').value,
         }, () => {
             const btn = document.getElementById('save');
             btn.innerText = '✓ System Saved';
@@ -646,12 +648,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveChats();
             renderChat();
         } catch (err) {
-            session.messages.pop();
-            saveChats();
             loadDiv.remove();
             const errDiv = document.createElement('div');
             errDiv.className = 'msg ai';
-            errDiv.innerHTML = `<span style="color:#ff5555">⚠ ${err.message}</span>`;
+            errDiv.innerHTML = `<span style="color:#ff5555">⚠ ${escapeHtml(err.message)}</span>`;
             chatMessages.appendChild(errDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }

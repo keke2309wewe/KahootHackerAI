@@ -86,7 +86,7 @@ function scanForGameBoard() {
 
                     chrome.storage.local.get(['panicMode'], (lateData) => {
                         if (!lateData.panicMode && response && response.winningColor) {
-                            highlightByColor(response.winningColor, answerBlocks);
+                            highlightByColor(response.winningColor, answerBlocks, response.steps);
                             hasAnsweredCurrentQuestion = true;
                         } else if (response && response.error) {
                             sysLog("AI Error: " + response.error);
@@ -100,7 +100,7 @@ function scanForGameBoard() {
     }
 }
 
-function highlightByColor(colorStr, validBlocks) {
+function highlightByColor(colorStr, validBlocks, steps) {
     let targetIndex = -1;
 
     // Naurok layout: Pink(RED)=0, Yellow=1, Blue=2, Green=3
@@ -116,7 +116,7 @@ function highlightByColor(colorStr, validBlocks) {
 
     if (validBlocks.length > targetIndex) {
         const targetEl = validBlocks[targetIndex];
-        applyStealthStyles(targetEl);
+        applyStealthStyles(targetEl, steps);
         sysLog(`Formatted block ${targetIndex} for ${colorStr}.`);
     } else {
         sysLog(`FATAL: Could not find block ${targetIndex} in DOM. Blocks found: ${validBlocks.length}`);

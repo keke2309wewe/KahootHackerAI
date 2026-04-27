@@ -7,15 +7,17 @@ let isAnalyzingClasstime = false;
 
 sysLog("Content script injected at: " + window.location.href);
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === "SCRUB_EVIDENCE") {
-        sysLog("Scrubbing UI evidence.");
-        scrubAllEvidence();
-    }
-});
+try {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.type === "SCRUB_EVIDENCE") {
+            sysLog("Scrubbing UI evidence.");
+            scrubAllEvidence();
+        }
+    });
+} catch (e) {}
 
 document.addEventListener('keydown', (e) => {
-    if (e.shiftKey && e.code === 'KeyA' && !isAnalyzingClasstime && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    if (e.shiftKey && e.code === 'KeyA' && !isAnalyzingClasstime && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
 
         chrome.storage.local.get(['panicMode'], (data) => {
             if (chrome.runtime.lastError || data.panicMode) return;
@@ -35,7 +37,7 @@ document.addEventListener('keydown', (e) => {
 
                 if (response.winningColor) {
                     sysLog(`AI says the answer is option: ${response.winningColor}`);
-                    applyClasstimeFormatting(response.winningColor);
+                    applyClasstimeFormatting(response.winningColor, response.steps);
                 } else if (response.error) {
                     sysLog("AI Error: " + response.error);
                 }
@@ -44,10 +46,44 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-function applyClasstimeFormatting(result) {
+function applyClasstimeFormatting(result, steps) {
     if (!result) return;
 
-    // 1. Identify valid inputs for multiple choice / single choice
+    // 1. Check if it's a grid/matrix response (e.g., "1:2; 2:1")
+    if (/^(\s*\d+:\d+\s*;?)+$/.test(result)) {
+        sysLog("Detected grid question format.");
+        const pairs = result.split(';').map(s => s.trim()).filter(s => s.includes(':'));
+        
+        // Find all visible grids
+        const grids = Array.from(document.querySelectorAll('table[role="grid"], table'));
+        const activeGrid = grids.find(g => {
+            const rect = g.getBoundingClientRect();
+            return rect.top >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight);
+        });
+
+        if (activeGrid) {
+            const rows = Array.from(activeGrid.querySelectorAll('tbody tr'));
+            pairs.forEach(pair => {
+                const [rowIdx, colIdx] = pair.split(':').map(Number);
+                const targetRow = rows[rowIdx - 1];
+                if (targetRow) {
+                    // Find the colIdx-th input in this row
+                    const inputs = Array.from(targetRow.querySelectorAll('input'));
+                    const targetInput = inputs[colIdx - 1];
+                    if (targetInput) {
+                        const targetContainer = targetInput.closest('label') || targetInput.parentElement;
+                        applyStealthStyles(targetContainer, steps);
+                        sysLog(`Highlighted Grid Row ${rowIdx}, Column ${colIdx}`);
+                    }
+                }
+            });
+            return; // Finished grid handling
+        } else {
+            sysLog("No active grid found in view.");
+        }
+    }
+
+    // 2. Identify valid inputs for multiple choice / single choice (legacy logic)
     const inputSelectors = [
         'input[type="radio"]', 
         'input[type="checkbox"]',
@@ -72,7 +108,7 @@ function applyClasstimeFormatting(result) {
     visibleInputs = [...new Set(visibleInputs)];
     visibleInputs.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 
-    // 2. Decide if the result is indices or text answer
+    // 3. Decide if the result is indices or text answer
     let isLikelyIndices = false;
     let targetIndices = [];
 
@@ -89,10 +125,10 @@ function applyClasstimeFormatting(result) {
         targetIndices.forEach(idx => {
             const targetInput = visibleInputs[idx - 1];
             const targetContainer = targetInput.closest('label') || targetInput.parentElement;
-            applyStealthStyles(targetContainer);
+            applyStealthStyles(targetContainer, steps);
         });
     } else {
-        // 3. Handle as text answer
+        // 4. Handle as text answer
         sysLog("Handling as text answer.");
         
         // Copy to clipboard

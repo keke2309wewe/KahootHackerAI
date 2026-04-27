@@ -84,3 +84,14 @@
     border: 1px dashed #00ff00 !important; position: absolute !important; 
     background: rgba(0,255,0,0.1) !important; pointer-events: none !important;
 }
+
+/* Ghost Steps — nearly invisible text for the steps display mode */
+.ai-steps-ghost {
+    font-size: 6px !important;
+    opacity: 0.08 !important;
+    user-select: none !important;
+    pointer-events: none !important;
+    color: inherit !important;
+    letter-spacing: 0 !important;
+    line-height: 1 !important;
+}

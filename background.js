@@ -8,7 +8,7 @@ function writeLog(msg) {
     });
 }
 
-writeLog("V4.3 ENGINE START.");
+writeLog("V4.9 ENGINE START.");
 
 // ── Shared API Helpers ────────────────────────────────────────────────────────
 function buildEndpoint(provider, customUrl) {
@@ -19,7 +19,7 @@ function buildEndpoint(provider, customUrl) {
 
 function buildHeaders(apiKey, provider) {
     const h = { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
-    if (provider === 'openrouter' || (!provider || provider === '')) {
+    if (!provider || provider === 'openrouter') {
         h['HTTP-Referer'] = 'https://kahoot-win.v';
     }
     return h;
@@ -72,7 +72,7 @@ function accumulateTokens(usage) {
 const DEFAULTS = {
     promptKahoot:   "You are a Kahoot player. Look at this screenshot of a Kahoot game. Read the question and the four answers provided in the colored boxes (Red Triangle, Blue Diamond, Yellow Circle, Green Square). Determine the correct answer. Output ONLY the color of the correct answer box. Your response must be exactly one word: RED, BLUE, YELLOW, or GREEN.",
     promptNaurok:   "Look at this screenshot of a Naurok quiz. Read the question and the four answer options displayed in colored boxes from left to right: Pink/Red, Yellow/Orange, Light Blue, Light Green. Determine the correct answer. Output ONLY the color of the correct answer box. Your response must be exactly one word: RED, YELLOW, BLUE, or GREEN.",
-    promptClasstime:"Look at this screenshot of a quiz on Classtime. 1. If it's a multiple-choice question (radio buttons or checkboxes), identify the correct option(s). Output ONLY the index number(s) of the correct option(s), counting from top down (1 for first, 2 for second, etc.). If multiple answers are correct, list them separated by commas (e.g., '1,3'). 2. If it's a text-based question, provide the correct text answer in plain text. NO LaTeX, no markdown, no formatting. Use simple characters typeable on a 60% keyboard.",
+    promptClasstime:"Look at this screenshot of a quiz on Classtime. 1. If it's a multiple-choice question (radio buttons or checkboxes), identify the correct option(s). Output ONLY the index number(s) of the correct option(s), counting from top down (1 for first, 2 for second, etc.). If multiple answers are correct, list them separated by commas (e.g., '1,3'). 2. If it's a grid/matrix question (rows of statements with columns of options), output the correct column index for each row in the format 'RowIndex:ColumnIndex' separated by semicolons (e.g., '1:2; 2:1; 3:2'). Row 1 is the first statement row. Column 1 is the first choice column. 3. If it's a text-based question, provide the correct text answer in plain text. NO LaTeX, no markdown, no formatting. Use simple characters typeable on a 60% keyboard.",
     promptSniper:   "You are a helper for an 8th-grade student in Ukraine (НУШ). Reply ONLY in Ukrainian. Give the shortest possible correct answer. If it's math/physics, provide clear steps but use ONLY plain text. NO LaTeX, no bolding, no markdown. Use simple characters (e.g., ^ for powers, / for fractions). Ensure it can be typed on a basic 60% keyboard.",
     promptCrop:     "Look at this cropped image from a test. Solve the problem or answer the question. Give ONLY the final answer or essential steps. Reply in Ukrainian. Use plain text ONLY. NO LaTeX, no formatting, no markdown. Must be typeable on a 60% keyboard.",
 };
@@ -132,9 +132,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
             writeLog('Screenshot acquired. Querying AI...');
             analyzeImageWithRetry(dataUrl, request.platform)
-                .then(answer => {
-                    writeLog(`AI answer: ${answer}`);
-                    sendResponse({ winningColor: answer });
+                .then(result => {
+                    writeLog(`AI answer: ${result.answer} | Steps: ${result.steps || 'none'}`);
+                    sendResponse({ winningColor: result.answer, steps: result.steps || '' });
                 })
                 .catch(err => {
                     writeLog(`API Error (after retry): ${err.message}`);
@@ -190,6 +190,24 @@ async function analyzeImageWithRetry(base64Image, platform, retries = 1) {
     }
 }
 
+// ── Steps Suffix (appended to all vision prompts at call time) ────────────────
+const STEPS_SUFFIX = "\n\nAlso, on the very last line of your response, show the minimal working step(s) that lead to the answer (e.g. '2^2 = 2x2 = 4'). Use ONLY plain ASCII characters. Prefix that line exactly with: STEPS: ";
+
+function parseSteps(rawText) {
+    const idx = rawText.lastIndexOf('\nSTEPS:');
+    if (idx === -1) {
+        // Try without newline prefix (AI might put it at the very start)
+        if (rawText.startsWith('STEPS:')) {
+            return { answer: '', steps: rawText.slice(6).trim() };
+        }
+        return { answer: rawText.trim(), steps: '' };
+    }
+    return {
+        answer: rawText.slice(0, idx).trim(),
+        steps:  rawText.slice(idx + 7).trim()   // 7 = '\nSTEPS:'.length
+    };
+}
+
 // ── Image Analysis (Kahoot / Classtime / Naurok) ──────────────────────────────
 async function analyzeImage(base64Image, platform) {
     const data = await getApiConfig();
@@ -203,6 +221,9 @@ async function analyzeImage(base64Image, platform) {
     } else {
         promptText = await getPrompt('promptKahoot');
     }
+
+    // Append STEPS instruction so the AI provides working steps
+    promptText += STEPS_SUFFIX;
 
     const payload = applyReasoning({
         model:       data.model || 'google/gemini-3-flash-preview',
@@ -230,28 +251,37 @@ async function analyzeImage(base64Image, platform) {
     if (!json.choices?.[0]) throw new Error(json.error?.message || 'API Limit or Unknown Error');
 
     accumulateTokens(json.usage);
-    let result = json.choices[0].message.content.trim();
+    const rawContent = json.choices[0].message.content.trim();
+    const { answer: answerPart, steps } = parseSteps(rawContent);
+
+    // Store the raw answer (without STEPS suffix) for the popup display
+    const result = answerPart || rawContent;
     chrome.storage.local.set({ lastAiAnswer: result });
 
     if (platform === 'classtime') {
+        // If it's a grid result (e.g., 1:2; 2:1), return it as is
+        if (/^(\s*\d+:\d+\s*;?)+$/.test(result)) {
+            return { answer: result, steps };
+        }
+
         // If result is just digits and commas, it's multiple choice
         if (/^[\d,\s]+$/.test(result)) {
-            return result;
+            return { answer: result, steps };
         }
         // If it's a single digit (possibly with extra text), try to extract it
         const digitMatch = result.match(/^\s*(\d+)\s*$/);
-        if (digitMatch) return digitMatch[1];
+        if (digitMatch) return { answer: digitMatch[1], steps };
         
         // Otherwise return the whole text (for free text)
-        return result;
+        return { answer: result, steps };
     }
 
     const upperResult = result.toUpperCase();
-    if (upperResult.includes('RED'))    return 'RED';
-    if (upperResult.includes('BLUE'))   return 'BLUE';
-    if (upperResult.includes('YELLOW')) return 'YELLOW';
-    if (upperResult.includes('GREEN'))  return 'GREEN';
-    return result;
+    if (upperResult.includes('RED'))    return { answer: 'RED',    steps };
+    if (upperResult.includes('BLUE'))   return { answer: 'BLUE',   steps };
+    if (upperResult.includes('YELLOW')) return { answer: 'YELLOW', steps };
+    if (upperResult.includes('GREEN'))  return { answer: 'GREEN',  steps };
+    return { answer: result, steps };
 }
 
 // ── Text Sniper ───────────────────────────────────────────────────────────────

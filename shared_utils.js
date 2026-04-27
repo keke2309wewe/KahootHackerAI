@@ -30,16 +30,29 @@ function scrubAllEvidence() {
         el.style.removeProperty('color');
         el.style.removeProperty('text-shadow');
         el.style.removeProperty('cursor');
+
+        // Clean up steps artifacts
+        el.removeAttribute('title');
+        if (el._aiStepsOver) {
+            el.removeEventListener('mouseover', el._aiStepsOver);
+            el.removeEventListener('mouseout',  el._aiStepsOut);
+            delete el._aiStepsOver;
+            delete el._aiStepsOut;
+        }
     });
+    // Remove ghost text spans
+    document.querySelectorAll('.ai-steps-ghost').forEach(s => s.remove());
+    // Clear statusbar
+    window.status = '';
 }
 
 /**
  * Applies the user's chosen stealth formatting to a target DOM element.
  * Reads settings from chrome.storage.local.
  */
-function applyStealthStyles(targetEl) {
+function applyStealthStyles(targetEl, steps) {
     chrome.storage.local.get(
-        ['styleBold', 'styleItalic', 'styleColor', 'styleFont', 'styleGhost', 'cursorStyle', 'themeColor', 'rainbowMode'],
+        ['styleBold', 'styleItalic', 'styleColor', 'styleFont', 'styleGhost', 'cursorStyle', 'themeColor', 'rainbowMode', 'stepsMode'],
         (data) => {
             if (data.styleBold !== false) targetEl.classList.add('ai-stealth-bold');
             if (data.styleItalic) targetEl.classList.add('ai-stealth-italic');
@@ -68,6 +81,50 @@ function applyStealthStyles(targetEl) {
             }
 
             targetEl.classList.add('ai-stealth');
+
+            // Inject steps if provided
+            if (steps) {
+                _injectSteps(targetEl, steps, data.stepsMode || 'steps_title');
+            }
         }
     );
+}
+
+/**
+ * Injects AI steps into the DOM using the chosen display mode.
+ * @param {HTMLElement} el - The highlighted answer element.
+ * @param {string} steps - Plain text steps (e.g. '2^2 = 2x2 = 4').
+ * @param {string} mode - One of: steps_title, steps_console, steps_statusbar, steps_ghost, none.
+ */
+function _injectSteps(el, steps, mode) {
+    if (!steps || mode === 'none') return;
+
+    switch (mode) {
+        case 'steps_title':
+            el.setAttribute('title', steps);
+            break;
+
+        case 'steps_console':
+            console.log('[AI STEPS] ' + steps);
+            break;
+
+        case 'steps_statusbar':
+            el._aiStepsOver = () => { window.status = steps; };
+            el._aiStepsOut  = () => { window.status = ''; };
+            el.addEventListener('mouseover', el._aiStepsOver);
+            el.addEventListener('mouseout',  el._aiStepsOut);
+            break;
+
+        case 'steps_ghost': {
+            const span = document.createElement('span');
+            span.className = 'ai-steps-ghost';
+            span.textContent = ' ' + steps;
+            el.appendChild(span);
+            break;
+        }
+
+        default:
+            el.setAttribute('title', steps);
+            break;
+    }
 }
