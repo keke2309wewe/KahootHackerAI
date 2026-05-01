@@ -167,7 +167,70 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return false;
     }
 
+    // ── Dashboard Result Reporting ────────────────────────────────────────────
+    if (request.type === 'REPORT_GAME_RESULT') {
+        reportGameResult(request.data);
+        return false;
+    }
+
 });
+
+// ── Dashboard Result Reporting ────────────────────────────────────────────────
+async function reportGameResult(resultData) {
+    try {
+        const config = await chrome.storage.local.get([
+            'dashboardUrl', 'dashboardToken', 'reportResults',
+            'reportKahoot', 'reportNaurok', 'reportClasstime', 'reportUniversal',
+            'model', 'provider', 'useReasoning', 'reasoningEffort',
+            'inputTokens', 'outputTokens', 'inCost', 'outCost'
+        ]);
+
+        // Check if reporting is enabled
+        if (!config.reportResults) return;
+        if (!config.dashboardUrl || !config.dashboardToken) return;
+
+        // Check per-platform toggle
+        const platform = resultData.platform || 'unknown';
+        const platformKey = `report${platform.charAt(0).toUpperCase() + platform.slice(1)}`;
+        if (config[platformKey] === false) return;
+
+        const payload = {
+            timestamp: new Date().toISOString(),
+            platform: platform,
+            quizTitle: resultData.quizTitle || '',
+            totalQuestions: resultData.totalQuestions || 0,
+            correctAnswers: resultData.correctAnswers || 0,
+            wrongAnswers: resultData.wrongAnswers || 0,
+            skipped: resultData.skipped || 0,
+            solveMode: resultData.solveMode || 'ai',
+            model: config.model || '',
+            provider: config.provider || 'openrouter',
+            inputTokens: resultData.inputTokens || 0,
+            outputTokens: resultData.outputTokens || 0,
+            estimatedCost: resultData.estimatedCost || 0,
+            reasoningEnabled: config.useReasoning || false,
+            reasoningEffort: config.reasoningEffort || 'medium'
+        };
+
+        const dashUrl = config.dashboardUrl.replace(/\/+$/, '');
+        const resp = await fetch(`${dashUrl}/api/results`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.dashboardToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (resp.ok) {
+            writeLog(`📊 Result reported to dashboard: ${platform} — ${resultData.correctAnswers}/${resultData.totalQuestions} correct`);
+        } else {
+            writeLog(`Dashboard report failed: HTTP ${resp.status}`);
+        }
+    } catch (err) {
+        writeLog(`Dashboard report error: ${err.message}`);
+    }
+}
 
 // ── Broadcast Helper ──────────────────────────────────────────────────────────
 function broadcastToActiveTab(msg) {

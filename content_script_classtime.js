@@ -5,6 +5,9 @@ const sysLog = createSysLog('Classtime');
 
 let isAnalyzingClasstime = false;
 
+// ── Session tracking for dashboard reporting ─────────────────────────────────
+let classtimeAnalysisCount = 0;
+
 sysLog("Content script injected at: " + window.location.href);
 
 try {
@@ -38,8 +41,12 @@ document.addEventListener('keydown', (e) => {
                 if (response.winningColor) {
                     sysLog(`AI says the answer is option: ${response.winningColor}`);
                     applyClasstimeFormatting(response.winningColor, response.steps);
+                    classtimeAnalysisCount++;
+                    reportClasstimeResult(true);
                 } else if (response.error) {
                     sysLog("AI Error: " + response.error);
+                    classtimeAnalysisCount++;
+                    reportClasstimeResult(false);
                 }
             });
         });
@@ -167,4 +174,30 @@ function applyClasstimeFormatting(result, steps) {
             }
         }
     }
-}
+}
+
+// ── Report analysis result to dashboard ──────────────────────────────────────
+function reportClasstimeResult(wasSuccessful) {
+    chrome.storage.local.get(['inputTokens', 'outputTokens', 'inCost', 'outCost'], (data) => {
+        const inC = data.inCost !== undefined ? data.inCost : 0.50;
+        const outC = data.outCost !== undefined ? data.outCost : 3.00;
+        const cost = ((data.inputTokens || 0) / 1_000_000 * inC) + ((data.outputTokens || 0) / 1_000_000 * outC);
+
+        chrome.runtime.sendMessage({
+            type: 'REPORT_GAME_RESULT',
+            data: {
+                platform: 'classtime',
+                quizTitle: document.title || 'Classtime Quiz',
+                totalQuestions: 1,
+                correctAnswers: wasSuccessful ? 1 : 0,
+                wrongAnswers: wasSuccessful ? 0 : 1,
+                skipped: 0,
+                solveMode: 'ai',
+                inputTokens: data.inputTokens || 0,
+                outputTokens: data.outputTokens || 0,
+                estimatedCost: cost
+            }
+        });
+    });
+}
+

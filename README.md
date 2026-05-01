@@ -2,7 +2,24 @@
 
 A stealthy, AI-powered browser extension designed to secretly solve online quizzes using vision models. It runs entirely in the background, takes screenshots of active quizzes, and highlights the correct answers using nearly invisible CSS modifications to avoid detection.
 
-## 🚀 What's New in v4.8
+## 🚀 What's New in v4.9
+
+* **Stealthy AI Steps Display:** See the AI's reasoning steps without leaving the quiz page. Choose from 4 invisible display modes:
+  * **Hover Tooltip** — Steps appear when you hover over the highlighted answer.
+  * **Console Whisper** — Steps are silently logged to the browser DevTools console (F12).
+  * **Status Bar** — Steps appear in the browser's status bar on hover.
+  * **Ghost Text** — Near-invisible micro-text appended to the answer element.
+* **Quiz Answer Pre-loader:** Paste a Kahoot Quiz UUID in the 🎯 tab to fetch all answers from the Kahoot API. Instant highlight — zero AI tokens used.
+* **Solve Mode (AI / Cache / Hybrid):** Choose how the extension determines correct answers:
+  * **Hybrid** (recommended) — Use cached answers first, fall back to AI for cache misses.
+  * **AI Only** — Always use screenshot analysis.
+  * **Cache Only** — Only use pre-loaded answers, no AI calls.
+* **Live Cache Status Bar:** The popup now shows a real-time indicator of whether a quiz cache is loaded, including quiz title, cached question count, and active solve mode.
+* **Results Dashboard (Docker):** A self-hosted results dashboard to track quiz performance, AI accuracy, token usage, and spending. Deployed via Docker at `results.andrewshlapak.xyz`.
+* **Bug Fix:** Chat error no longer removes the user's message from history.
+* **Bug Fix:** Crop sniper escape key listener is now properly cleaned up.
+
+## 🚀 What Was New in v4.8
 
 * **Classtime Multiple Choice Support:** Now fully supports both radio buttons and checkboxes. Highlights multiple correct options simultaneously.
 * **Classtime Auto-Fill & Clipboard:** For free-text questions, the AI result is now automatically typed into the answer box and copied to your clipboard.
@@ -37,6 +54,7 @@ A stealthy, AI-powered browser extension designed to secretly solve online quizz
 * **Tab Visibility Bypass:** Locks the browser's `visibilityState` to "visible", preventing quiz sites from knowing when you switch tabs.
 * **Panic Button (Kill Switch):** Press `Ctrl+Shift+X` (or `Cmd+Shift+X` on Mac) to instantly scrub all visual evidence from the screen and pause the background scanner.
 * **BYOK (Bring Your Own Key):** Supports OpenRouter, OpenAI, or any Custom API endpoint.
+* **Results Dashboard:** After each game, the extension can automatically report results (correct/wrong count, model, cost, etc.) to a self-hosted Docker dashboard for historical tracking and analytics.
 
 ## 🛠️ How to Install (Developer Mode)
 
@@ -83,6 +101,42 @@ Before the extension can solve anything, you need to provide it with an AI brain
 * **Crop Sniper:** Press `Alt+C` to activate the crosshair, drag to select an area, and the AI will analyze the cropped image.
 * **Direct Chat:** Open the popup and click **Comms**. Ask any question or paste a screenshot for immediate help.
 * **Panic Mode:** If someone is walking by, hit `Ctrl+Shift+X` (`Cmd+Shift+X` on Mac) or click the red Panic button in the popup. The extension will instantly revert any modified text or buttons back to normal and pause auto-scanning until toggled off.
+
+## 📊 Results Dashboard (Docker)
+
+A self-hosted dashboard to track quiz performance across all platforms. Deployed via Docker on your home server.
+
+### Features
+* **Stats Overview** — Total games, overall accuracy %, total spending, most-used model
+* **Per-Platform Breakdown** — Accuracy and game count per platform (Kahoot, Naurok, Classtime)
+* **Filterable Results Table** — Sort by time, accuracy, cost; filter by platform
+* **Expandable Detail Rows** — Token breakdown, solve mode, reasoning config per game
+* **Bearer Token Auth** — All API endpoints secured with a configurable token
+* **Dark Hacker Theme** — Matches the extension's aesthetic with animated backgrounds
+
+### Setup
+
+```bash
+cd results-dashboard
+
+# Set your secret token in docker-compose.yml
+# Then build and run:
+docker compose up -d --build
+```
+
+The dashboard runs on port `3888` by default. Point your Cloudflare tunnel or reverse proxy to `localhost:3888`.
+
+### Extension Configuration
+
+1. Open the extension popup → **Settings**
+2. Scroll to **📊 Dashboard Reporting**
+3. Enable **Result Reporting**
+4. Set **Dashboard URL** to `https://results.andrewshlapak.xyz`
+5. Set the **Token** to match your `DASHBOARD_TOKEN` env var
+6. Toggle per-platform checkboxes (Kahoot ☑ / Naurok ☑ / Classtime ☑ / Universal ☑)
+7. Click **Save Configuration**
+
+Results will be automatically reported after each game session.
 
 ---
 *Disclaimer: This tool is intended for educational and proof-of-concept purposes. Use responsibly.*

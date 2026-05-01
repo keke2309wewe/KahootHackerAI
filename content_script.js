@@ -8,6 +8,12 @@ let hasAnsweredCurrentQuestion = false;
 let lastLogState = "";
 let scanInterval;
 
+// ── Session tracking for dashboard reporting ─────────────────────────────────
+let sessionCorrect = 0;
+let sessionWrong = 0;
+let sessionQuestions = 0;
+let sessionReported = false;
+
 sysLog("Content script injected at: " + window.location.href);
 
 try {
@@ -39,10 +45,31 @@ function scanForGameBoard() {
 
             const url = window.location.href;
 
+            // ── Game-over detection ──────────────────────────────────────
+            if ((url.includes("/ranking") || url.includes("/podium")) && !sessionReported && sessionQuestions > 0) {
+                sysLog(`🏁 Game over detected! Reporting: ${sessionCorrect}/${sessionQuestions}`);
+                sessionReported = true;
+                reportKahootResult();
+                return;
+            }
+
             if (url.includes("/answer/")) {
                 if (lastLogState !== "result_screen") {
                     sysLog("Result screen detected. Waiting for next round.");
                     lastLogState = "result_screen";
+
+                    // Detect correct/incorrect from the result screen
+                    setTimeout(() => {
+                        const bodyText = document.body.textContent.toLowerCase();
+                        sessionQuestions++;
+                        if (bodyText.includes("correct") && !bodyText.includes("incorrect")) {
+                            sessionCorrect++;
+                            sysLog(`Session: ✓ correct (${sessionCorrect}/${sessionQuestions})`);
+                        } else {
+                            sessionWrong++;
+                            sysLog(`Session: ✗ wrong (${sessionWrong}/${sessionQuestions})`);
+                        }
+                    }, 1500);
                 }
                 return;
             }
@@ -64,7 +91,6 @@ function scanForGameBoard() {
             }
 
             if ((answerBlocks.length >= 2 || isGameBlock) && !isAnalyzing && !hasAnsweredCurrentQuestion) {
-                // textContent is cheaper than innerText (no layout reflow)
                 const bodyText = document.body.textContent.toLowerCase();
                 if (bodyText.includes("time's up") || bodyText.includes("correct") || bodyText.includes("incorrect")) {
                     return;
@@ -124,6 +150,31 @@ function highlightByColor(colorStr, steps) {
     } else {
         sysLog(`FATAL: Could not find ${colorStr} element in DOM.`);
     }
+}
+
+// ── Report game result to dashboard ──────────────────────────────────────────
+function reportKahootResult() {
+    chrome.storage.local.get(['inputTokens', 'outputTokens', 'inCost', 'outCost'], (data) => {
+        const inC = data.inCost !== undefined ? data.inCost : 0.50;
+        const outC = data.outCost !== undefined ? data.outCost : 3.00;
+        const cost = ((data.inputTokens || 0) / 1_000_000 * inC) + ((data.outputTokens || 0) / 1_000_000 * outC);
+
+        chrome.runtime.sendMessage({
+            type: 'REPORT_GAME_RESULT',
+            data: {
+                platform: 'kahoot',
+                quizTitle: document.title || 'Kahoot Game',
+                totalQuestions: sessionQuestions,
+                correctAnswers: sessionCorrect,
+                wrongAnswers: sessionWrong,
+                skipped: Math.max(0, sessionQuestions - sessionCorrect - sessionWrong),
+                solveMode: 'ai',
+                inputTokens: data.inputTokens || 0,
+                outputTokens: data.outputTokens || 0,
+                estimatedCost: cost
+            }
+        });
+    });
 }
 
 scanInterval = setInterval(scanForGameBoard, 1000);

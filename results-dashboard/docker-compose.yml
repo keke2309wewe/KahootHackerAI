@@ -1,0 +1,14 @@
+services:
+  results-dashboard:
+    build: .
+    container_name: kahoot-results
+    restart: unless-stopped
+    ports:
+      - "3888:3000"
+    environment:
+      - DASHBOARD_TOKEN=CHANGE_ME_TO_A_SECURE_RANDOM_STRING
+    volumes:
+      - results-data:/app/data
+
+volumes:
+  results-data:

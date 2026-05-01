@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KahootHackerAI — Results Dashboard</title>
+    <meta name="description" content="Self-hosted results dashboard for KahootHackerAI extension. Track quiz performance, AI accuracy, and spending.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Header -->
+    <header id="app-header">
+        <div class="header-inner">
+            <div class="logo-group">
+                <div class="logo-icon">⚡</div>
+                <div>
+                    <h1>Results Dashboard</h1>
+                    <p class="subtitle">KahootHackerAI · Telemetry Feed</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="connection-badge" id="connectionBadge">
+                    <span class="pulse-dot"></span>
+                    <span id="connectionText">Connecting…</span>
+                </div>
+                <button class="btn-icon" id="refreshBtn" title="Refresh data">🔄</button>
+                <button class="btn-icon danger" id="clearAllBtn" title="Clear all data">🗑️</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Stats Cards -->
+        <section class="stats-grid" id="statsGrid">
+            <div class="stat-card" id="cardGames">
+                <div class="stat-icon">🎮</div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statGames">—</div>
+                    <div class="stat-label">Total Games</div>
+                </div>
+            </div>
+            <div class="stat-card accent-green" id="cardAccuracy">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statAccuracy">—</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-sub" id="statCorrectWrong"></div>
+            </div>
+            <div class="stat-card accent-purple" id="cardCost">
+                <div class="stat-icon">💰</div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statCost">—</div>
+                    <div class="stat-label">Total Spent</div>
+                </div>
+                <div class="stat-sub" id="statTokens"></div>
+            </div>
+            <div class="stat-card accent-blue" id="cardModel">
+                <div class="stat-icon">🤖</div>
+                <div class="stat-body">
+                    <div class="stat-value truncate" id="statModel">—</div>
+                    <div class="stat-label">Top Model</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Breakdown -->
+        <section class="platform-strip" id="platformStrip">
+            <!-- dynamically filled -->
+        </section>
+
+        <!-- Filter Bar -->
+        <section class="filter-bar">
+            <div class="filter-group">
+                <button class="filter-btn active" data-platform="all">All</button>
+                <button class="filter-btn" data-platform="kahoot">🟣 Kahoot</button>
+                <button class="filter-btn" data-platform="naurok">🟠 Naurok</button>
+                <button class="filter-btn" data-platform="classtime">🔵 Classtime</button>
+                <button class="filter-btn" data-platform="universal">⚪ Universal</button>
+            </div>
+        </section>
+
+        <!-- Results Table -->
+        <section class="table-wrapper">
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="timestamp">Time ↕</th>
+                        <th>Platform</th>
+                        <th>Quiz</th>
+                        <th class="sortable" data-sort="correctAnswers">Correct ↕</th>
+                        <th class="sortable" data-sort="wrongAnswers">Wrong ↕</th>
+                        <th>Accuracy</th>
+                        <th>Model</th>
+                        <th class="sortable" data-sort="estimatedCost">Cost ↕</th>
+                        <th>Details</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <tr><td colspan="10" class="empty-state">Loading results…</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Empty State -->
+        <div class="empty-hero" id="emptyHero" style="display:none;">
+            <div class="empty-icon">📊</div>
+            <h2>No Results Yet</h2>
+            <p>Play a quiz with the extension enabled and results will appear here automatically.</p>
+        </div>
+    </main>
+
+    <footer>
+        <p>KahootHackerAI Results Dashboard · Hosted at <code>results.andrewshlapak.xyz</code></p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

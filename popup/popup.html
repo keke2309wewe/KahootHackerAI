@@ -256,6 +256,35 @@
                 </select>
             </div>
         </div>
+
+        <div class="section-title">📊 Dashboard Reporting</div>
+
+        <div class="form-group">
+            <div class="checkbox-grid" style="grid-template-columns: 1fr;">
+                <label class="checkbox-label"><input type="checkbox" id="reportResults"> Enable Result Reporting</label>
+            </div>
+        </div>
+
+        <div class="split-input form-group">
+            <div style="flex:2;">
+                <label>Dashboard URL</label>
+                <input type="text" id="dashboardUrl" placeholder="https://results.andrewshlapak.xyz" value="https://results.andrewshlapak.xyz">
+            </div>
+            <div style="flex:1;">
+                <label>Token</label>
+                <input type="password" id="dashboardToken" placeholder="secret token">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Report Platforms</label>
+            <div class="checkbox-grid">
+                <label class="checkbox-label"><input type="checkbox" id="reportKahoot" checked> 🟣 Kahoot</label>
+                <label class="checkbox-label"><input type="checkbox" id="reportNaurok" checked> 🟠 Naurok</label>
+                <label class="checkbox-label"><input type="checkbox" id="reportClasstime" checked> 🔵 Classtime</label>
+                <label class="checkbox-label"><input type="checkbox" id="reportUniversal" checked> ⚪ Universal</label>
+            </div>
+        </div>
         
         <button id="save" class="btn-primary">Save Configuration</button>
         <button id="testConnectionBtn" class="btn-secondary">Test Connection</button>

@@ -10,6 +10,12 @@ let lastQuestionText = "";
 let scanInterval;
 let questionReadyTime = 0;
 
+// ── Session tracking for dashboard reporting ─────────────────────────────────
+let sessionCorrect = 0;
+let sessionWrong = 0;
+let sessionQuestions = 0;
+let sessionReported = false;
+
 sysLog("Content script injected at: " + window.location.href);
 
 try {
@@ -45,6 +51,13 @@ function scanForGameBoard() {
                 if (lastLogState !== "complete_screen") {
                     sysLog("Test complete screen detected. Shutting down scanner.");
                     lastLogState = "complete_screen";
+
+                    // Report result to dashboard
+                    if (!sessionReported && sessionQuestions > 0) {
+                        sessionReported = true;
+                        sysLog(`🏁 Naurok complete! Reporting: ${sessionCorrect}/${sessionQuestions}`);
+                        reportNaurokResult();
+                    }
                 }
                 return;
             }
@@ -121,6 +134,31 @@ function highlightByColor(colorStr, validBlocks, steps) {
     } else {
         sysLog(`FATAL: Could not find block ${targetIndex} in DOM. Blocks found: ${validBlocks.length}`);
     }
+}
+
+// ── Report game result to dashboard ──────────────────────────────────────────
+function reportNaurokResult() {
+    chrome.storage.local.get(['inputTokens', 'outputTokens', 'inCost', 'outCost'], (data) => {
+        const inC = data.inCost !== undefined ? data.inCost : 0.50;
+        const outC = data.outCost !== undefined ? data.outCost : 3.00;
+        const cost = ((data.inputTokens || 0) / 1_000_000 * inC) + ((data.outputTokens || 0) / 1_000_000 * outC);
+
+        chrome.runtime.sendMessage({
+            type: 'REPORT_GAME_RESULT',
+            data: {
+                platform: 'naurok',
+                quizTitle: document.title || 'Naurok Test',
+                totalQuestions: sessionQuestions,
+                correctAnswers: sessionCorrect,
+                wrongAnswers: sessionWrong,
+                skipped: Math.max(0, sessionQuestions - sessionCorrect - sessionWrong),
+                solveMode: 'ai',
+                inputTokens: data.inputTokens || 0,
+                outputTokens: data.outputTokens || 0,
+                estimatedCost: cost
+            }
+        });
+    });
 }
 
 scanInterval = setInterval(scanForGameBoard, 1000);

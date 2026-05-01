@@ -227,7 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'apiKey','model','provider','customUrl','themeColor','rainbowMode',
         'panicMode','styleBold','styleItalic','styleColor','styleFont','styleGhost',
         'cursorStyle','chatSessions','activeChatId','useNushPrompt',
-        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort','stepsMode'
+        'inCost','outCost','visibilityBypass','useReasoning','reasoningEffort','stepsMode',
+        'dashboardUrl','dashboardToken','reportResults',
+        'reportKahoot','reportNaurok','reportClasstime','reportUniversal'
     ];
     chrome.storage.local.get(settingsKeys, (data) => {
         if (data.apiKey)    document.getElementById('apiKey').value  = data.apiKey;
@@ -261,6 +263,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('useReasoning').checked = data.useReasoning === true;
         if (data.reasoningEffort) document.getElementById('reasoningEffort').value = data.reasoningEffort;
         if (data.stepsMode) document.getElementById('stepsMode').value = data.stepsMode;
+
+        // Dashboard settings
+        if (data.dashboardUrl) document.getElementById('dashboardUrl').value = data.dashboardUrl;
+        if (data.dashboardToken) document.getElementById('dashboardToken').value = data.dashboardToken;
+        document.getElementById('reportResults').checked = data.reportResults === true;
+        document.getElementById('reportKahoot').checked = data.reportKahoot !== false;
+        document.getElementById('reportNaurok').checked = data.reportNaurok !== false;
+        document.getElementById('reportClasstime').checked = data.reportClasstime !== false;
+        document.getElementById('reportUniversal').checked = data.reportUniversal !== false;
 
         useNushPrompt.checked = data.useNushPrompt !== false;
 
@@ -356,6 +367,13 @@ document.addEventListener('DOMContentLoaded', () => {
             useReasoning:     document.getElementById('useReasoning').checked,
             reasoningEffort:  document.getElementById('reasoningEffort').value,
             stepsMode:        document.getElementById('stepsMode').value,
+            dashboardUrl:     document.getElementById('dashboardUrl').value.trim(),
+            dashboardToken:   document.getElementById('dashboardToken').value.trim(),
+            reportResults:    document.getElementById('reportResults').checked,
+            reportKahoot:     document.getElementById('reportKahoot').checked,
+            reportNaurok:     document.getElementById('reportNaurok').checked,
+            reportClasstime:  document.getElementById('reportClasstime').checked,
+            reportUniversal:  document.getElementById('reportUniversal').checked,
         }, () => {
             const btn = document.getElementById('save');
             btn.innerText = '✓ System Saved';
